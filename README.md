@@ -1,4 +1,4 @@
-# 🌱 种植园尨译助手 (Plantation Moetran Helper)
+# 🌱 种植园尨译助手 (Zhongzhiyuan Moetran Helper)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
