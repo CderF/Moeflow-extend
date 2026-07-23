@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>种植园尨译助手</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="img/icon.png" alt="Icon" />
+      </div>
+      <div>
+        <div class="brand-title">种植园尨译助手</div>
+        <span class="team-badge">种植园汉化组</span>
+      </div>
+    </div>
+    <button class="refresh-icon-btn" id="btn-refresh-popup" title="刷新数据">
+      <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6"/>
+        <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1 1A10 10 0 0 0 22 12.5"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Main Scrollable Area -->
+  <main class="main-content">
+    <!-- User Card -->
+    <div class="user-card" id="user-card-element">
+      <div class="user-avatar" id="user-avatar-text">
+        <img src="img/icon.png" alt="Icon" />
+      </div>
+      <div class="user-info">
+        <div class="user-name" id="user-name-text">种植园汉化组成员</div>
+        <div class="user-status" id="user-status-text">
+          <span class="status-dot"></span>已连接 尨译 [moetran.com]
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Overview Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">参与项目总数</span>
+        <span class="stat-number" id="stat-total-projects">--</span>
+        <span class="stat-sub" id="stat-plantation-projects">种植园 -- 个</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">翻译句子数</span>
+        <span class="stat-number stat-blue" id="stat-translated-count">--</span>
+        <span class="stat-sub" id="stat-translation-rate">完成率 --%</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">校对句子数</span>
+        <span class="stat-number stat-purple" id="stat-checked-count">--</span>
+        <span class="stat-sub" id="stat-checked-rate">完成率 --%</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">状态分布</span>
+        <span class="stat-number stat-green" id="stat-active-projects">--</span>
+        <span class="stat-sub" id="stat-finished-projects">进行中 / 已完成 --</span>
+      </div>
+    </div>
+
+    <!-- Project Breakdown Section -->
+    <div class="section-header">
+      <span class="section-title">最近20个项目进度</span>
+      <span class="last-sync-label" id="last-sync-label">全量自动同步</span>
+    </div>
+
+    <div class="project-list" id="project-list-container">
+      <div class="loading-state">
+        <svg class="sf-icon sf-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/>
+        </svg>
+        <span>加载数据中...</span>
+      </div>
+    </div>
+
+    <!-- Diagnostic Panel Section -->
+    <div class="diagnostic-wrapper">
+      <button class="diagnostic-toggle-btn" id="btn-toggle-diagnostic">
+        <span class="btn-inner">
+          <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          运行分步诊断测试
+        </span>
+        <span id="diagnostic-arrow" class="arrow-icon">
+          <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </span>
+      </button>
+
+      <div class="diagnostic-panel" id="diagnostic-panel-box" style="display: none;">
+        <div class="diagnostic-header">
+          <span>系统连通性与分步断言</span>
+          <button class="diagnostic-run-btn" id="btn-run-diagnostic">
+            <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            立即运行全套测试
+          </button>
+        </div>
+        <div class="diagnostic-log" id="diagnostic-log-container">
+          <div class="diag-info">点击“立即运行全套测试”开始诊断 Token、API 和数据解析...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer Actions -->
+  <footer class="footer">
+    <button class="btn btn-secondary" id="btn-open-dashboard">
+      <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+      </svg>
+      仪表盘
+    </button>
+    <button class="btn btn-primary" id="btn-copy-report">
+      <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+        <path d="M9 12h6"></path>
+        <path d="M9 16h6"></path>
+      </svg>
+      <span id="copy-btn-text">一键工作简报</span>
+    </button>
+  </footer>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

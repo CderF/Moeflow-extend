@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "name": "种植园尨译助手",
+  "version": "0.0.1",
+  "description": "面向种植园汉化组组员的尨译网站工作统计助手",
+  "author": "OuKaTsuki",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "cookies",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://moetran.com/*",
+    "https://api.moetran.com/*",
+    "https://*.m-t.pics/*",
+    "https://c01.m-t.pics/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https: data: blob:;"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_icon": {
+      "16": "img/icon.png",
+      "32": "img/icon.png",
+      "48": "img/icon.png",
+      "64": "img/icon.png",
+      "128": "img/icon.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "img/icon.png",
+    "32": "img/icon.png",
+    "48": "img/icon.png",
+    "64": "img/icon.png",
+    "128": "img/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://moetran.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "img/icon.png"
+      ],
+      "matches": [
+        "https://moetran.com/*"
+      ]
+    }
+  ]
+}
