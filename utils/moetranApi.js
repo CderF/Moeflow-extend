@@ -125,6 +125,39 @@ async function fetchWithAuth(endpoint, options = {}) {
 }
 
 /**
+ * Convert remote avatar URL to Base64 Data URL to bypass referrer/CORS restrictions
+ */
+export async function fetchAvatarAsBase64(avatarUrl) {
+  if (!avatarUrl || typeof avatarUrl !== "string") return "";
+  if (avatarUrl.startsWith("data:image/")) return avatarUrl;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const response = await fetch(avatarUrl, {
+      method: "GET",
+      referrerPolicy: "no-referrer",
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) return avatarUrl;
+
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result || avatarUrl);
+      reader.onerror = () => resolve(avatarUrl);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn("[MoetranAPI] Failed to fetch avatar as Base64:", err);
+    return avatarUrl;
+  }
+}
+
+/**
  * Get current user information
  * Endpoint: /v1/user/info
  */
@@ -147,11 +180,19 @@ export async function getUserInfo() {
         avatarUrl = "";
       }
 
+      let avatarDataUrl = avatarUrl;
+      if (avatarUrl && !avatarUrl.startsWith("data:image/")) {
+        avatarDataUrl = await fetchAvatarAsBase64(avatarUrl);
+      }
+
+      const teamRole = userData.teamRole || userData.role?.name || (typeof userData.role === 'string' ? userData.role : '') || "";
+
       return {
         id: userData.id || userData._id,
         name: userData.name || userData.nickname || userData.username || userData.email || "尨译用户",
         email: userData.email || "",
-        avatar: avatarUrl
+        avatar: avatarDataUrl || avatarUrl || "",
+        teamRole: teamRole ? normalizeTeamRole(teamRole) : ""
       };
     }
     return null;
@@ -159,6 +200,94 @@ export async function getUserInfo() {
     console.warn("[MoetranAPI] Failed to get user info:", err);
     return null;
   }
+}
+
+/**
+ * Normalize and map role string/code to the 5 official Moetran team roles:
+ * "创建人", "管理员", "资深成员", "成员", "见习成员"
+ */
+export function normalizeTeamRole(roleVal) {
+  if (!roleVal) return "成员";
+
+  if (typeof roleVal === "object") {
+    roleVal = roleVal.name || roleVal.title || roleVal.role || roleVal.type || roleVal.level || JSON.stringify(roleVal);
+  }
+
+  const str = String(roleVal).toLowerCase().trim();
+
+  // Admin / 管理员 check first
+  if (str.includes("管理员") || str.includes("admin") || str.includes("manager") || str === "2") {
+    return "管理员";
+  }
+  // Creator / Owner / 创建人
+  if (str.includes("创建人") || str.includes("创建者") || str.includes("owner") || str.includes("creator") || str === "1") {
+    return "创建人";
+  }
+  // Senior / 资深成员
+  if (str.includes("资深") || str.includes("senior") || str === "3") {
+    return "资深成员";
+  }
+  // Trainee / 见习成员
+  if (str.includes("见习") || str.includes("实习") || str.includes("trainee") || str.includes("intern") || str === "5") {
+    return "见习成员";
+  }
+  // Member / 成员
+  if (str.includes("成员") || str.includes("组员") || str.includes("member") || str === "4") {
+    return "成员";
+  }
+  return "成员";
+}
+
+/**
+ * Fetch team member role for 种植园汉化组 to find current user's official team role
+ * Endpoint: /v1/teams/{teamId} or /v1/teams/{teamId}/members?page=1&limit=100
+ */
+export async function getPlantationTeamMemberRole(currentUserId) {
+  // Option 1: Direct team detail query
+  try {
+    const teamRes = await fetchWithAuth(`/v1/teams/${TEAM_PLANTATION_ID}`);
+    const teamData = teamRes.data || teamRes;
+    if (teamData) {
+      const myRole = teamData.myRole || teamData.userRole || teamData.role || teamData.my_role || teamData.user_role;
+      if (myRole) {
+        const rawName = typeof myRole === "object" ? (myRole.name || myRole.title || myRole.role) : myRole;
+        if (rawName) return normalizeTeamRole(rawName);
+      }
+    }
+  } catch (e) {
+    console.warn("[MoetranAPI] Direct team info fetch warning:", e);
+  }
+
+  // Option 2: Team members list query
+  try {
+    const res = await fetchWithAuth(`/v1/teams/${TEAM_PLANTATION_ID}/members?page=1&limit=100`);
+    let memberList = [];
+    if (Array.isArray(res)) memberList = res;
+    else if (Array.isArray(res.data)) memberList = res.data;
+    else if (res.data && Array.isArray(res.data.list)) memberList = res.data.list;
+    else if (res.data && Array.isArray(res.data.members)) memberList = res.data.members;
+
+    if (memberList.length > 0) {
+      const match = memberList.find(m => {
+        const uObj = m.user || m.userInfo || m.user_info || {};
+        const uId = uObj.id || uObj._id || m.userId || m.user_id || m.id || m._id;
+        const uName = uObj.name || uObj.username || uObj.nickname || m.name || m.username;
+
+        if (currentUserId && String(uId) === String(currentUserId)) return true;
+        if (currentUserId && typeof currentUserId === "string" && uName && uName.toLowerCase() === currentUserId.toLowerCase()) return true;
+        return false;
+      });
+
+      if (match) {
+        const rawRole = match.role?.name || match.role || match.roleName || match.role_name || match.permission || match.type || match.level;
+        if (rawRole) return normalizeTeamRole(rawRole);
+      }
+    }
+  } catch (err) {
+    console.warn("[MoetranAPI] Failed to fetch team member role:", err);
+  }
+
+  return null;
 }
 
 /**
@@ -319,6 +448,18 @@ export function calculateWorkStats(projects = []) {
     allProjects.plantationProjectsAllTime : 
     allProjects.filter(isPlantationProject).length;
 
+  // Extract user's role in 种植园汉化组 team
+  let plantationRole = "成员";
+  const plantationItem = allProjects.find(isPlantationProject);
+  if (plantationItem) {
+    const teamObj = plantationItem.team || {};
+    const tRoleObj = plantationItem.teamRole || plantationItem.team_role || teamObj.userRole || teamObj.role || {};
+    const rName = typeof tRoleObj === 'string' ? tRoleObj : (tRoleObj.name || tRoleObj.title || '');
+    if (rName && rName.trim()) {
+      plantationRole = normalizeTeamRole(rName.trim());
+    }
+  }
+
   const projectList = recentProjects.map(proj => {
     const teamObj = proj.team || {};
     const isPlantation = isPlantationProject(proj);
@@ -371,6 +512,7 @@ export function calculateWorkStats(projects = []) {
     activeProjects,
     finishedProjects,
     plantationProjects,
+    plantationRole,
     totalSources,
     totalTranslated,
     totalChecked,

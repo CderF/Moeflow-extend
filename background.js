@@ -3,7 +3,7 @@
  * Handles background statistics sync, message handling, and token management.
  */
 
-import { getUserInfo, getUserProjects, calculateWorkStats, TEAM_PLANTATION_ID } from "./utils/moetranApi.js";
+import { getUserInfo, getUserProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, TEAM_PLANTATION_ID } from "./utils/moetranApi.js";
 
 async function injectContentScriptToAllTabs() {
   try {
@@ -34,18 +34,26 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 /**
- * Perform stats & user info refresh from Moetran API (Recent 20 items)
+ * Perform stats & user info refresh from Moetran API (Recent items)
  */
 async function refreshUserStats() {
   try {
-    // 1. Fetch user info for username and avatar
+    // 1. Fetch user info for username, avatar and official team role
     const userInfo = await getUserInfo();
     let profile = null;
     if (userInfo) {
+      let officialTeamRole = "";
+      try {
+        officialTeamRole = await getPlantationTeamMemberRole(userInfo.id);
+      } catch (e) {
+        console.warn("[Background] Team member role fetch warning:", e);
+      }
+
       profile = {
         name: userInfo.name || "尨译用户",
         email: userInfo.email || "",
-        avatar: userInfo.avatar || ""
+        avatar: userInfo.avatar || "",
+        teamRole: officialTeamRole ? normalizeTeamRole(officialTeamRole) : (userInfo.teamRole ? normalizeTeamRole(userInfo.teamRole) : "")
       };
       await chrome.storage.local.set({ userProfile: profile });
     } else {
@@ -56,6 +64,13 @@ async function refreshUserStats() {
     // 2. Fetch user participated project list (with pagination to fetch all items) and calculate statistics
     const projects = await getUserProjects(1, 100);
     const stats = calculateWorkStats(Array.isArray(projects) ? projects : []);
+
+    if (profile) {
+      if (!profile.teamRole) {
+        profile.teamRole = normalizeTeamRole(stats.plantationRole);
+      }
+      await chrome.storage.local.set({ userProfile: profile });
+    }
     await chrome.storage.local.set({ workStats: stats, lastSyncTime: Date.now() });
 
     // Update badge with plantation project count

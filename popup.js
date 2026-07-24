@@ -63,6 +63,34 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.tabs.create({ url: "https://moetran.com/dashboard/projects" });
   });
 
+  // Project item card click delegation
+  const projectListContainer = document.getElementById("project-list-container");
+  if (projectListContainer) {
+    projectListContainer.addEventListener("click", (e) => {
+      const card = e.target.closest(".clickable-project-card");
+      if (!card) return;
+      const projId = card.getAttribute("data-project-id");
+      if (!projId) return;
+
+      const targetUrl = `https://moetran.com/dashboard/projects/${projId}`;
+      if (typeof chrome !== "undefined" && chrome.tabs) {
+        chrome.tabs.query({ url: ["https://moetran.com/*", "https://*.moetran.com/*"] }, (tabs) => {
+          if (tabs && tabs.length > 0) {
+            chrome.tabs.update(tabs[0].id, { url: targetUrl, active: true }, () => {
+              if (chrome.windows) {
+                chrome.windows.update(tabs[0].windowId, { focused: true });
+              }
+            });
+          } else {
+            chrome.tabs.create({ url: targetUrl });
+          }
+        });
+      } else {
+        window.open(targetUrl, "_blank");
+      }
+    });
+  }
+
   // Copy report handler
   btnCopyReport.addEventListener("click", () => {
     chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (res) => {
@@ -153,11 +181,19 @@ function renderStats(stats, userProfile) {
   const userAvatarElem = document.getElementById("user-avatar-text");
 
   if (userProfile && userProfile.name) {
-    userNameElem.innerText = userProfile.name;
-    userAvatarElem.innerHTML = `<img src="img/icon.png" alt="Icon" />`;
+    const roleText = userProfile.teamRole || stats.plantationRole || "成员";
+    userNameElem.innerHTML = `
+      <span>${userProfile.name}</span>
+      <span class="user-role-badge">${roleText}</span>
+    `;
+    if (userProfile.avatar && userProfile.avatar.trim() !== "") {
+      userAvatarElem.innerHTML = `<img src="${userProfile.avatar}" alt="Avatar" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.onerror=null; this.src='img/icon.png';" />`;
+    } else {
+      userAvatarElem.innerHTML = `<img class="icon-light" src="img/icon.png" alt="Icon" /><img class="icon-dark" src="img/icon-white.png" alt="Icon White" />`;
+    }
   } else {
     userNameElem.innerText = "未登录 / 游客";
-    userAvatarElem.innerHTML = `<img src="img/icon.png" alt="Icon" />`;
+    userAvatarElem.innerHTML = `<img class="icon-light" src="img/icon.png" alt="Icon" /><img class="icon-dark" src="img/icon-white.png" alt="Icon White" />`;
   }
 
   document.getElementById("stat-total-projects").innerText = stats.totalProjects || 0;
@@ -187,7 +223,7 @@ function renderStats(stats, userProfile) {
   container.innerHTML = stats.projectList.map(proj => {
     const displayTitle = proj.fullTitle || `${proj.teamName || '个人项目'} - ${proj.name}`;
     return `
-    <div class="project-item">
+    <div class="project-item clickable-project-card" data-project-id="${proj.id}" title="点击在网页中打开该项目：${displayTitle}">
       <div class="project-header">
         <span class="project-name" title="${displayTitle}">${displayTitle}</span>
         ${proj.isPlantation ? '<span class="p-tag p-tag-plantation">🌱 种植园</span>' : ''}

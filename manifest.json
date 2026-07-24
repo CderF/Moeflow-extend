@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "种植园尨译助手",
-  "version": "0.0.1",
-  "description": "面向种植园汉化组组员的尨译网站工作统计助手",
+  "version": "0.1.0",
+  "description": "面向种植园汉化组组员的尨译工作助手",
   "author": "OuKaTsuki",
   "permissions": [
     "storage",
     "tabs",
     "activeTab",
     "cookies",
-    "scripting"
+    "scripting",
+    "alarms"
   ],
   "host_permissions": [
     "https://moetran.com/*",
@@ -26,20 +27,20 @@
   },
   "action": {
     "default_icon": {
-      "16": "img/icon.png",
-      "32": "img/icon.png",
-      "48": "img/icon.png",
-      "64": "img/icon.png",
-      "128": "img/icon.png"
+      "16": "img/cotton.png",
+      "32": "img/cotton.png",
+      "48": "img/cotton.png",
+      "64": "img/cotton.png",
+      "128": "img/cotton.png"
     },
     "default_popup": "popup.html"
   },
   "icons": {
-    "16": "img/icon.png",
-    "32": "img/icon.png",
-    "48": "img/icon.png",
-    "64": "img/icon.png",
-    "128": "img/icon.png"
+    "16": "img/cotton.png",
+    "32": "img/cotton.png",
+    "48": "img/cotton.png",
+    "64": "img/cotton.png",
+    "128": "img/cotton.png"
   },
   "content_scripts": [
     {
@@ -58,7 +59,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "img/icon.png"
+        "img/icon.png",
+        "img/icon-white.png"
       ],
       "matches": [
         "https://moetran.com/*"

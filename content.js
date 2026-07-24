@@ -81,13 +81,15 @@ function initFloatingWidget() {
   if (document.getElementById("mt-floating-widget-root")) return;
 
   const iconUrl = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL ? chrome.runtime.getURL("img/icon.png") : "";
+  const iconWhiteUrl = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL ? chrome.runtime.getURL("img/icon-white.png") : "";
 
   const container = document.createElement("div");
   container.id = "mt-floating-widget-root";
   container.innerHTML = `
     <button class="mt-floating-trigger" id="mt-floating-trigger-btn">
       <div class="mt-icon-box">
-        <img src="${iconUrl}" alt="Icon" />
+        <img class="mt-icon-light" src="${iconUrl}" alt="Icon" />
+        <img class="mt-icon-dark" src="${iconWhiteUrl}" alt="Icon White" />
       </div>
       <span id="mt-floating-btn-text">种植园助手</span>
     </button>
