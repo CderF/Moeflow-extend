@@ -133,28 +133,55 @@ export async function fetchAvatarAsBase64(avatarUrl) {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     const response = await fetch(avatarUrl, {
       method: "GET",
-      referrerPolicy: "no-referrer",
       signal: controller.signal
     });
     clearTimeout(timeoutId);
 
-    if (!response.ok) return avatarUrl;
-
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result || avatarUrl);
-      reader.onerror = () => resolve(avatarUrl);
-      reader.readAsDataURL(blob);
-    });
+    if (response.ok) {
+      const blob = await response.blob();
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result || "");
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(blob);
+      });
+      if (base64 && base64.startsWith("data:image/")) return base64;
+    }
   } catch (err) {
     console.warn("[MoetranAPI] Failed to fetch avatar as Base64:", err);
-    return avatarUrl;
   }
+
+  return avatarUrl;
+}
+
+/**
+ * Safely extract avatar URL string from user data object
+ */
+export function extractAvatarUrl(userData) {
+  if (!userData) return "";
+  let raw = userData.avatar || userData.avatar_url || userData.avatarUrl || userData.avatar_path || userData.avatarPath || userData.profile?.avatar || "";
+
+  if (typeof raw === "object" && raw !== null) {
+    raw = raw.url || raw.path || raw.src || raw.link || raw.full_url || raw.key || "";
+  }
+
+  if (typeof raw !== "string") return "";
+  raw = raw.trim();
+  if (!raw) return "";
+
+  if (raw.startsWith("//")) {
+    return "https:" + raw;
+  }
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("data:")) {
+    return raw;
+  }
+
+  const webBase = "https://moetran.com";
+  return `${webBase}${raw.startsWith('/') ? '' : '/'}${raw}`;
 }
 
 /**
@@ -167,18 +194,7 @@ export async function getUserInfo() {
     const userData = res.data?.user || res.data || res.user || res;
     
     if (userData && (userData.name || userData.username || userData.nickname || userData.email)) {
-      let avatarUrl = userData.avatar || userData.avatar_url || userData.avatarUrl || "";
-      if (typeof avatarUrl === "string" && avatarUrl.trim() !== "") {
-        avatarUrl = avatarUrl.trim();
-        if (avatarUrl.startsWith("//")) {
-          avatarUrl = "https:" + avatarUrl;
-        } else if (!avatarUrl.startsWith("http") && !avatarUrl.startsWith("data:")) {
-          const webBase = "https://moetran.com";
-          avatarUrl = `${webBase}${avatarUrl.startsWith('/') ? '' : '/'}${avatarUrl}`;
-        }
-      } else {
-        avatarUrl = "";
-      }
+      const avatarUrl = extractAvatarUrl(userData);
 
       let avatarDataUrl = avatarUrl;
       if (avatarUrl && !avatarUrl.startsWith("data:image/")) {

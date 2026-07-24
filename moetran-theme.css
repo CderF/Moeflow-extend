@@ -1,0 +1,414 @@
+/* Moetran Dark Theme Stylesheet - Moetran Plantation Helper */
+
+:root {
+  --mt-dark-bg-base: #121214;
+  --mt-dark-bg-elevated: #1c1c1e;
+  --mt-dark-bg-card: #242428;
+  --mt-dark-bg-hover: #2c2c30;
+  --mt-dark-bg-input: #1a1a1c;
+  --mt-dark-border: rgba(255, 255, 255, 0.12);
+  --mt-dark-text-main: #f2f2f7;
+  --mt-dark-text-sub: #98989d;
+  --mt-dark-text-muted: #6e6e73;
+  --mt-dark-accent: #007aff;
+  --mt-dark-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Force Dark Mode when data-mt-theme="dark" */
+html[data-mt-theme="dark"] {
+  color-scheme: dark !important;
+  background-color: var(--mt-dark-bg-base) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+html[data-mt-theme="dark"] body,
+html[data-mt-theme="dark"] #app,
+html[data-mt-theme="dark"] #root,
+html[data-mt-theme="dark"] .v-application,
+html[data-mt-theme="dark"] .v-application--wrap,
+html[data-mt-theme="dark"] main,
+html[data-mt-theme="dark"] .main-container,
+html[data-mt-theme="dark"] .content-wrapper,
+html[data-mt-theme="dark"] .layout-container {
+  background-color: var(--mt-dark-bg-base) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* Header & Navigation Bar */
+html[data-mt-theme="dark"] header,
+html[data-mt-theme="dark"] nav,
+html[data-mt-theme="dark"] .v-app-bar,
+html[data-mt-theme="dark"] .v-toolbar,
+html[data-mt-theme="dark"] .navbar,
+html[data-mt-theme="dark"] .top-bar {
+  background-color: rgba(28, 28, 30, 0.92) !important;
+  border-bottom: 1px solid var(--mt-dark-border) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* Sidebar & Navigation Drawer */
+html[data-mt-theme="dark"] aside,
+html[data-mt-theme="dark"] .v-navigation-drawer,
+html[data-mt-theme="dark"] .sidebar,
+html[data-mt-theme="dark"] .drawer,
+html[data-mt-theme="dark"] .Dashboard__CollapsibleMenu {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  border-right: 1px solid var(--mt-dark-border) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* Cards, Containers, Boxes & Panels */
+html[data-mt-theme="dark"] .card,
+html[data-mt-theme="dark"] .v-card,
+html[data-mt-theme="dark"] .panel,
+html[data-mt-theme="dark"] .box,
+html[data-mt-theme="dark"] .project-card,
+html[data-mt-theme="dark"] .dashboard-item,
+html[data-mt-theme="dark"] .v-sheet,
+html[data-mt-theme="dark"] .v-paper,
+html[data-mt-theme="dark"] .el-card {
+  background-color: var(--mt-dark-bg-card) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+  color: var(--mt-dark-text-main) !important;
+  box-shadow: var(--mt-dark-shadow) !important;
+}
+
+html[data-mt-theme="dark"] .card:hover,
+html[data-mt-theme="dark"] .v-card:hover,
+html[data-mt-theme="dark"] .project-card:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+/* Tables & Lists */
+html[data-mt-theme="dark"] table,
+html[data-mt-theme="dark"] .v-data-table,
+html[data-mt-theme="dark"] .el-table {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+html[data-mt-theme="dark"] th,
+html[data-mt-theme="dark"] td,
+html[data-mt-theme="dark"] .v-data-table-header,
+html[data-mt-theme="dark"] tr {
+  background-color: transparent !important;
+  border-color: var(--mt-dark-border) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+html[data-mt-theme="dark"] tr:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+/* Form Inputs, Textareas & Selects */
+html[data-mt-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-mt-theme="dark"] textarea,
+html[data-mt-theme="dark"] select,
+html[data-mt-theme="dark"] .v-input__control,
+html[data-mt-theme="dark"] .v-text-field__slot input,
+html[data-mt-theme="dark"] [contenteditable="true"],
+html[data-mt-theme="dark"] .ant-input,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-borderless) {
+  background-color: var(--mt-dark-bg-input) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+}
+
+html[data-mt-theme="dark"] .ant-input-borderless,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-borderless {
+  background-color: transparent !important;
+  border: none !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+html[data-mt-theme="dark"] input::placeholder,
+html[data-mt-theme="dark"] textarea::placeholder {
+  color: var(--mt-dark-text-muted) !important;
+}
+
+/* Dialogs, Modals, Popovers & Menus */
+html[data-mt-theme="dark"] .v-dialog,
+html[data-mt-theme="dark"] .v-menu__content,
+html[data-mt-theme="dark"] .v-list,
+html[data-mt-theme="dark"] .modal-content,
+html[data-mt-theme="dark"] .el-dialog,
+html[data-mt-theme="dark"] .dropdown-menu {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+  box-shadow: var(--mt-dark-shadow) !important;
+}
+
+/* Text & Typography Overrides */
+html[data-mt-theme="dark"] p,
+html[data-mt-theme="dark"] span:not([class*="mt-"]):not(.v-btn__content),
+html[data-mt-theme="dark"] div:not([class*="mt-"]),
+html[data-mt-theme="dark"] h1,
+html[data-mt-theme="dark"] h2,
+html[data-mt-theme="dark"] h3,
+html[data-mt-theme="dark"] h4,
+html[data-mt-theme="dark"] h5,
+html[data-mt-theme="dark"] h6,
+html[data-mt-theme="dark"] label,
+html[data-mt-theme="dark"] li {
+  color: inherit;
+}
+
+html[data-mt-theme="dark"] .text--secondary,
+html[data-mt-theme="dark"] .subtitle-1,
+html[data-mt-theme="dark"] .subtitle-2,
+html[data-mt-theme="dark"] .text-muted,
+html[data-mt-theme="dark"] .caption {
+  color: var(--mt-dark-text-sub) !important;
+}
+
+/* Moetran Translation & Proofreading Workspace Specifics */
+html[data-mt-theme="dark"] .translation-workspace,
+html[data-mt-theme="dark"] .editor-container,
+html[data-mt-theme="dark"] .segment-item,
+html[data-mt-theme="dark"] .translation-row,
+html[data-mt-theme="dark"] .ImageSourceViewer__List,
+html[data-mt-theme="dark"] [class*="ImageSourceViewer"] {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+html[data-mt-theme="dark"] .segment-item.active,
+html[data-mt-theme="dark"] .translation-row.selected {
+  background-color: rgba(0, 122, 255, 0.15) !important;
+  border-left: 3px solid var(--mt-dark-accent) !important;
+}
+
+html[data-mt-theme="dark"] .glossary-panel,
+html[data-mt-theme="dark"] .history-panel,
+html[data-mt-theme="dark"] .comment-section {
+  background-color: var(--mt-dark-bg-card) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* Dashboard React Components (CollapsibleMenu, ProjectList, ListItem) */
+html[data-mt-theme="dark"] .ListItem,
+html[data-mt-theme="dark"] .ListItem__Name,
+html[data-mt-theme="dark"] .ProjectList__Status {
+  color: var(--mt-dark-text-main) !important;
+}
+
+html[data-mt-theme="dark"] .ListItem:hover,
+html[data-mt-theme="dark"] .ProjectList__Status:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+html[data-mt-theme="dark"] .ListItem--active {
+  background-color: rgba(0, 122, 255, 0.15) !important;
+  color: var(--mt-dark-accent) !important;
+}
+
+html[data-mt-theme="dark"] .ListItem--active .ListItem__Name {
+  color: var(--mt-dark-accent) !important;
+}
+
+html[data-mt-theme="dark"] .ProjectList__Status--active {
+  color: var(--mt-dark-accent) !important;
+  border-bottom-color: var(--mt-dark-accent) !important;
+}
+
+/* Ant Design Base Overrides */
+html[data-mt-theme="dark"] .ant-btn {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  color: var(--mt-dark-text-main) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+html[data-mt-theme="dark"] .ant-btn-primary {
+  background-color: var(--mt-dark-accent) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+html[data-mt-theme="dark"] .ant-input-group-addon {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  border-color: var(--mt-dark-border) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+
+/* Custom Overlay Scrollbars in Dark Mode */
+html[data-mt-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html[data-mt-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--mt-dark-bg-base);
+}
+
+html[data-mt-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+html[data-mt-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* ----------------------------------------------------
+   Comprehensive Ant Design Dark Mode Overrides
+------------------------------------------------------- */
+
+/* 1. Modals, Popovers, Dropdowns & Tooltips */
+html[data-mt-theme="dark"] .ant-modal-content,
+html[data-mt-theme="dark"] .ant-modal-header,
+html[data-mt-theme="dark"] .ant-popover-inner,
+html[data-mt-theme="dark"] .ant-popover-inner-content,
+html[data-mt-theme="dark"] .ant-popover-arrow-content,
+html[data-mt-theme="dark"] .ant-dropdown-menu,
+html[data-mt-theme="dark"] .ant-dropdown-menu-item,
+html[data-mt-theme="dark"] .ant-select-dropdown,
+html[data-mt-theme="dark"] .ant-select-item,
+html[data-mt-theme="dark"] .ant-tooltip-inner {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+}
+
+/* 2. Empty States, Skeletons & Placeholders */
+html[data-mt-theme="dark"] .ant-empty-description {
+  color: var(--mt-dark-text-sub) !important;
+}
+
+html[data-mt-theme="dark"] .ant-skeleton-element .ant-skeleton-button,
+html[data-mt-theme="dark"] .ant-skeleton-element .ant-skeleton-avatar,
+html[data-mt-theme="dark"] .ant-skeleton-element .ant-skeleton-input,
+html[data-mt-theme="dark"] .ant-skeleton-content .ant-skeleton-title,
+html[data-mt-theme="dark"] .ant-skeleton-content .ant-skeleton-paragraph > li,
+html[data-mt-theme="dark"] .ant-skeleton-image {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 3. Tabs & Badges */
+html[data-mt-theme="dark"] .ant-tabs-bar,
+html[data-mt-theme="dark"] .ant-tabs-nav {
+  color: var(--mt-dark-text-main) !important;
+  border-bottom-color: var(--mt-dark-border) !important;
+}
+
+html[data-mt-theme="dark"] .ant-badge-count {
+  box-shadow: 0 0 0 1px var(--mt-dark-border) !important;
+}
+
+/* 4. Color Dimming (Badges, Active Statuses, Tags) */
+html[data-mt-theme="dark"] .ant-tag,
+html[data-mt-theme="dark"] .ant-badge,
+html[data-mt-theme="dark"] .ProjectList__Status--active,
+html[data-mt-theme="dark"] [class*="badge"],
+html[data-mt-theme="dark"] [class*="status"] {
+  filter: brightness(0.85) saturate(0.9) !important;
+}
+
+/* ==========================================
+   Targeted Fixes for Specific White Elements
+   ========================================== */
+
+/* 1. Dashboard Selected Item Background */
+/* 增加选择器权重，覆盖原有的白色背景 */
+html[data-mt-theme="dark"] .Dashboard__CollapsibleMenu .ListItem--active,
+html[data-mt-theme="dark"] .Dashboard__TeamList .ListItem--active,
+html[data-mt-theme="dark"] .List__Items .ListItem--active,
+html[data-mt-theme="dark"] .ant-menu-item-selected {
+  background-color: rgba(0, 122, 255, 0.2) !important;
+}
+
+/* 2. White Divider Lines in Workspace */
+/* 替换所有的白色分割线、拖拽条为深色边框 */
+html[data-mt-theme="dark"] .ant-divider,
+html[data-mt-theme="dark"] .el-divider,
+html[data-mt-theme="dark"] .SplitPane,
+html[data-mt-theme="dark"] .Resizer,
+html[data-mt-theme="dark"] [class*="Divider"],
+html[data-mt-theme="dark"] [class*="Splitter"],
+html[data-mt-theme="dark"] [class*="Resizer"] {
+  background-color: var(--mt-dark-border) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* 3. Image Hover White Glow -> Dark Blue */
+/* 将图片、卡片的悬浮白色发光替换为深蓝色溢光 */
+html[data-mt-theme="dark"] [class*="ImageSourceViewer"] [class*="Item"]:hover,
+html[data-mt-theme="dark"] [class*="ImageSourceViewer"] [class*="Card"]:hover,
+html[data-mt-theme="dark"] .ant-card:hover,
+html[data-mt-theme="dark"] [class*="Card"]:hover,
+html[data-mt-theme="dark"] [class*="Image"]:hover {
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.45) !important;
+}
+
+/* 4. Proofreading Mode Black Text */
+/* 强制表格、列表以及整个翻译校对工作区的文字颜色反转 */
+html[data-mt-theme="dark"] .translation-workspace,
+html[data-mt-theme="dark"] .editor-container,
+html[data-mt-theme="dark"] .ant-table,
+html[data-mt-theme="dark"] .ant-table-tbody > tr > td,
+html[data-mt-theme="dark"] .ant-table-thead > tr > th,
+html[data-mt-theme="dark"] .ant-list-item,
+html[data-mt-theme="dark"] .ant-list-item-meta-title,
+html[data-mt-theme="dark"] .ant-list-item-meta-description,
+html[data-mt-theme="dark"] [class*="Proofread"],
+html[data-mt-theme="dark"] [class*="Proofreading"],
+html[data-mt-theme="dark"] [class*="Segment"],
+html[data-mt-theme="dark"] [class*="Table"] {
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 5. Translation Workspace Generic Buttons */
+/* 修复图片翻译区域内的非 ant-btn 原生按钮或自定义按钮白底白字问题 */
+html[data-mt-theme="dark"] .translation-workspace button:not(.ant-btn-primary):not([class*="primary"]),
+html[data-mt-theme="dark"] [class*="ImageSource"] button,
+html[data-mt-theme="dark"] .v-btn {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+}
+html[data-mt-theme="dark"] .translation-workspace button:hover:not(.ant-btn-primary):not([class*="primary"]),
+html[data-mt-theme="dark"] [class*="ImageSource"] button:hover {
+  background-color: var(--mt-dark-bg-elevated) !important;
+}
+
+/* 6. Image Viewer Floating Controls (Toolbar, Pagination, Settings) */
+/* 针对图片浏览区域左上角、右上角、左下角的悬浮灰色功能块 */
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Control"],
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Toolbar"],
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Pagination"],
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Panel"],
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Tool"],
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Action"],
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Menu"] {
+  background-color: rgba(28, 28, 30, 0.85) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* 确保这些悬浮块内部的图标和文字（例如 2/38）颜色不被覆盖为不可见 */
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Control"] *,
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Toolbar"] *,
+html[data-mt-theme="dark"] [class*="Viewer"] [class*="Pagination"] * {
+  color: var(--mt-dark-text-main) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* 精确打击未被覆盖的缩放面板和返回按钮 */
+html[data-mt-theme="dark"] [class*="MovableItem_ImageViewerZoomPanel"],
+html[data-mt-theme="dark"] [class*="BackButton"],
+html[data-mt-theme="dark"] [class*="BackBotton"] {
+  background-color: rgba(28, 28, 30, 0.95) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+  backdrop-filter: blur(4px);
+}
+
+html[data-mt-theme="dark"] [class*="MovableItem_ImageViewerZoomPanel"] *,
+html[data-mt-theme="dark"] [class*="BackButton"] *,
+html[data-mt-theme="dark"] [class*="BackBotton"] * {
+  color: var(--mt-dark-text-main) !important;
+}

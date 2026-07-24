@@ -10,8 +10,18 @@
     "activeTab",
     "cookies",
     "scripting",
-    "alarms"
+    "alarms",
+    "declarativeNetRequest"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "avatar_referer_rules",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
   "host_permissions": [
     "https://moetran.com/*",
     "https://api.moetran.com/*",
@@ -43,6 +53,18 @@
     "128": "img/cotton.png"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "https://moetran.com/*"
+      ],
+      "js": [
+        "theme-preloader.js"
+      ],
+      "css": [
+        "moetran-theme.css"
+      ],
+      "run_at": "document_start"
+    },
     {
       "matches": [
         "https://moetran.com/*"

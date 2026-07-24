@@ -39,23 +39,30 @@ document.addEventListener("DOMContentLoaded", () => {
     btnRefresh.classList.add("is-refreshing");
     btnRefresh.disabled = true;
 
-    chrome.runtime.sendMessage({ type: "FETCH_STATS" }, (res) => {
+    if (chrome.runtime && chrome.runtime.id) {
+      chrome.runtime.sendMessage({ type: "FETCH_STATS" }, (res) => {
+        if (chrome.runtime.lastError) console.warn(chrome.runtime.lastError.message);
+        btnRefresh.classList.remove("is-refreshing");
+        btnRefresh.disabled = false;
+
+        if (res && res.success && res.stats) {
+          renderStats(res.stats, res.userProfile);
+        } else {
+          console.warn("Refresh stats error:", res ? res.error : "Unknown error");
+          chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (cacheRes) => {
+            if (chrome.runtime.lastError) console.warn(chrome.runtime.lastError.message);
+            if (cacheRes && cacheRes.stats && cacheRes.userProfile) {
+              renderStats(cacheRes.stats, cacheRes.userProfile);
+            } else {
+              renderErrorState(res ? res.error : "未检测到登录状态");
+            }
+          });
+        }
+      });
+    } else {
       btnRefresh.classList.remove("is-refreshing");
       btnRefresh.disabled = false;
-
-      if (res && res.success && res.stats) {
-        renderStats(res.stats, res.userProfile);
-      } else {
-        console.warn("Refresh stats error:", res ? res.error : "Unknown error");
-        chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (cacheRes) => {
-          if (cacheRes && cacheRes.stats && cacheRes.userProfile) {
-            renderStats(cacheRes.stats, cacheRes.userProfile);
-          } else {
-            renderErrorState(res ? res.error : "未检测到登录状态");
-          }
-        });
-      }
-    });
+    }
   });
 
   // Open Dashboard handler
@@ -93,39 +100,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Copy report handler
   btnCopyReport.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (res) => {
-      if (res && res.stats) {
-        const text = generateReportText(res.stats, res.userProfile);
-        navigator.clipboard.writeText(text).then(() => {
-          const targetElem = copyBtnText || btnCopyReport;
-          const origText = targetElem.innerText;
-          targetElem.innerText = "已复制简报！";
-          setTimeout(() => {
-            targetElem.innerText = origText;
-          }, 2000);
-        });
-      }
-    });
-  });
-});
-
-function loadStats() {
-  chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (res) => {
-    if (res && res.stats && res.userProfile) {
-      renderStats(res.stats, res.userProfile);
-    } else {
-      // Trigger fresh fetch
-      chrome.runtime.sendMessage({ type: "FETCH_STATS" }, (fetchRes) => {
-        if (fetchRes && fetchRes.success && fetchRes.stats) {
-          renderStats(fetchRes.stats, fetchRes.userProfile);
-        } else if (res && res.stats && res.userProfile) {
-          renderStats(res.stats, res.userProfile);
-        } else {
-          renderErrorState(fetchRes ? fetchRes.error : "未检测到登录状态");
+    if (chrome.runtime && chrome.runtime.id) {
+      chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (res) => {
+        if (chrome.runtime.lastError) {
+          console.warn(chrome.runtime.lastError.message);
+          return;
+        }
+        if (res && res.stats) {
+          const text = generateReportText(res.stats, res.userProfile);
+          navigator.clipboard.writeText(text).then(() => {
+            const targetElem = copyBtnText || btnCopyReport;
+            const origText = targetElem.innerText;
+            targetElem.innerText = "已复制简报！";
+            setTimeout(() => {
+              targetElem.innerText = origText;
+            }, 2000);
+          });
         }
       });
     }
   });
+});
+
+function loadStats() {
+  if (chrome.runtime && chrome.runtime.id) {
+    chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (res) => {
+      if (chrome.runtime.lastError) console.warn(chrome.runtime.lastError.message);
+      if (res && res.stats && res.userProfile) {
+        renderStats(res.stats, res.userProfile);
+      } else {
+        // Trigger fresh fetch
+        chrome.runtime.sendMessage({ type: "FETCH_STATS" }, (fetchRes) => {
+          if (chrome.runtime.lastError) console.warn(chrome.runtime.lastError.message);
+          if (fetchRes && fetchRes.success && fetchRes.stats) {
+            renderStats(fetchRes.stats, fetchRes.userProfile);
+          } else if (res && res.stats && res.userProfile) {
+            renderStats(res.stats, res.userProfile);
+          } else {
+            renderErrorState(fetchRes ? fetchRes.error : "未检测到登录状态");
+          }
+        });
+      }
+    });
+  } else {
+    renderErrorState("扩展上下文已失效，请刷新页面");
+  }
 }
 
 function renderErrorState(errorMessage = "未检测到登录状态") {
@@ -186,8 +205,15 @@ function renderStats(stats, userProfile) {
       <span>${userProfile.name}</span>
       <span class="user-role-badge">${roleText}</span>
     `;
-    if (userProfile.avatar && userProfile.avatar.trim() !== "") {
-      userAvatarElem.innerHTML = `<img src="${userProfile.avatar}" alt="Avatar" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.onerror=null; this.src='img/icon.png';" />`;
+    const avatarSrc = userProfile.avatar && typeof userProfile.avatar === "string" ? userProfile.avatar.trim() : "";
+    if (avatarSrc) {
+      userAvatarElem.innerHTML = `<img src="${avatarSrc}" alt="Avatar" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      const imgElem = userAvatarElem.querySelector('img');
+      if (imgElem) {
+        imgElem.addEventListener("error", function() {
+          userAvatarElem.innerHTML = `<img class="icon-light" src="img/icon.png" alt="Icon" /><img class="icon-dark" src="img/icon-white.png" alt="Icon White" />`;
+        }, { once: true });
+      }
     } else {
       userAvatarElem.innerHTML = `<img class="icon-light" src="img/icon.png" alt="Icon" /><img class="icon-dark" src="img/icon-white.png" alt="Icon White" />`;
     }
@@ -263,5 +289,47 @@ function generateReportText(stats, userProfile) {
          `🔍 校对总句数：${stats.totalChecked} / ${stats.totalSources} (${stats.overallProofreadProgress}%)\n` +
          `------------------------------\n` +
          `发送自：种植园尨译助手 🚀`;
+}
+
+function runDiagnosticSuite() {
+  const diagBox = document.getElementById("diagnostic-panel-box");
+  if (!diagBox) return;
+  
+  let output = diagBox.querySelector(".diag-output");
+  if (!output) {
+    output = document.createElement("div");
+    output.className = "diag-output";
+    output.style.marginTop = "10px";
+    output.style.fontSize = "11px";
+    output.style.color = "var(--sf-text-secondary)";
+    output.style.wordBreak = "break-all";
+    diagBox.appendChild(output);
+  }
+  
+  output.innerHTML = "正在运行诊断...<br>";
+  
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+    chrome.runtime.sendMessage({ type: "GET_CACHED_STATS" }, (res) => {
+      if (chrome.runtime.lastError) {
+        output.innerHTML += `<span style="color:var(--sf-red)">错误: ${chrome.runtime.lastError.message}</span><br>`;
+        return;
+      }
+      if (res && res.stats) {
+        output.innerHTML += `<span style="color:var(--sf-green)">缓存状态: 正常 (${res.stats.totalProjects}个项目)</span><br>`;
+      } else {
+        output.innerHTML += `<span style="color:var(--sf-orange)">缓存状态: 无数据</span><br>`;
+      }
+      
+      if (res && res.userProfile) {
+        output.innerHTML += `<span style="color:var(--sf-green)">用户状态: 已获取 (${res.userProfile.name})</span><br>`;
+      } else {
+        output.innerHTML += `<span style="color:var(--sf-orange)">用户状态: 未获取</span><br>`;
+      }
+      
+      output.innerHTML += "诊断完成。";
+    });
+  } else {
+    output.innerHTML += `<span style="color:var(--sf-red)">扩展上下文失效，请刷新页面。</span><br>`;
+  }
 }
 

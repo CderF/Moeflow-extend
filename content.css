@@ -61,8 +61,7 @@
 /* Floating Trigger Capsule (iOS Dynamic Island Style) */
 .mt-floating-trigger {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  /* left / top are set dynamically by JS (drag & storage) */
   z-index: 99999;
   display: flex;
   align-items: center;
@@ -76,21 +75,36 @@
   border: 1px solid var(--mt-border);
   border-radius: 9999px;
   box-shadow: var(--mt-shadow);
-  cursor: pointer;
+  cursor: grab;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Only transition visual properties — NOT left/top (avoids lag during drag) */
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              opacity   0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              box-shadow 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              border-color 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   user-select: none;
 }
 
 .mt-floating-trigger:hover {
-  transform: translateY(-2px) scale(1.05);
+  transform: scale(1.05);
   box-shadow: 0 16px 36px rgba(0, 122, 255, 0.25);
   border-color: var(--mt-sf-blue);
 }
 
 .mt-floating-trigger:active {
   transform: scale(0.95);
+}
+
+/* Drag-in-progress state */
+.mt-floating-trigger.mt-dragging,
+.mt-floating-trigger.mt-dragging:hover,
+.mt-floating-trigger.mt-dragging:active {
+  cursor: grabbing !important;
+  transform: scale(0.9) !important;
+  opacity: 0.85;
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.32);
+  transition: transform 0.12s ease, opacity 0.12s ease !important;
 }
 
 .mt-floating-trigger .mt-icon-box {
@@ -133,9 +147,8 @@
 /* Floating Stat Widget Panel (iOS Control Center Card) */
 .mt-stat-modal {
   position: fixed;
-  bottom: 76px;
-  right: 24px;
-  z-index: 99999;
+  /* left / right / top / bottom are set dynamically by positionModal() */
+  z-index: 99998; /* below trigger button (99999) so button stays on top */
   width: 360px;
   max-height: 520px;
   background: var(--mt-bg-glass);
@@ -151,7 +164,7 @@
   overflow: hidden;
   opacity: 0;
   transform: translateY(16px) scale(0.92);
-  transform-origin: bottom right;
+  /* transform-origin is set dynamically by positionModal() */
   pointer-events: none;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -337,3 +350,234 @@
 .mt-btn-secondary:active {
   transform: scale(0.97);
 }
+
+/* ========================================
+   Sub-Capsule Menu
+   Appears above / below the main capsule
+   ======================================== */
+
+.mt-sub-menu {
+  position: fixed;
+  z-index: 99997; /* main capsule: 99999, modal: 99998 */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none; /* disabled until open */
+  /* left / right / top / bottom set by positionSubMenu() */
+}
+
+.mt-sub-menu.mt-open {
+  pointer-events: auto;
+}
+
+/* Individual sub-capsule — smaller than main, same glass style */
+.mt-sub-capsule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 10px;
+  background: var(--mt-bg-glass);
+  color: var(--mt-text);
+  font-family: var(--mt-sf-font);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--mt-border);
+  border-radius: 9999px;
+  box-shadow: var(--mt-shadow);
+  cursor: pointer;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+
+  /* === CLOSED STATE === */
+  opacity: 0;
+  /* Closing easing: snappy ease-in (fast collapse) */
+  transition: opacity 0.18s cubic-bezier(0.32, 0, 0.67, 0),
+              transform 0.18s cubic-bezier(0.32, 0, 0.67, 0),
+              border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Starting transform depends on expansion direction */
+.mt-sub-menu.mt-direction-up   .mt-sub-capsule { transform: translateY(14px) scale(0.72); }
+.mt-sub-menu.mt-direction-down .mt-sub-capsule { transform: translateY(-14px) scale(0.72); }
+
+/* === CLOSING STAGGER (reversed: furthest closes first) === */
+/* Upward: item 1 is furthest from trigger, item 3 is nearest */
+.mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(1) { transition-delay: 0ms; }
+.mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(2) { transition-delay: 35ms; }
+.mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(3) { transition-delay: 70ms; }
+/* Downward: item 3 is furthest, item 1 is nearest */
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(3) { transition-delay: 0ms; }
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(2) { transition-delay: 35ms; }
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(1) { transition-delay: 70ms; }
+
+/* === OPENED STATE === */
+.mt-sub-menu.mt-open .mt-sub-capsule {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  /* Spring opening easing: cubic-bezier overshoot ≈ iOS spring */
+  transition: opacity 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.2s, box-shadow 0.2s;
+}
+
+/* === OPENING STAGGER (nearest first) === */
+/* Upward: item 3 (bottom) is nearest the trigger → opens first */
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(3) { transition-delay: 0ms;   }
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(2) { transition-delay: 55ms;  }
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(1) { transition-delay: 110ms; }
+/* Downward: item 1 (top) is nearest the trigger → opens first */
+.mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(1) { transition-delay: 0ms;   }
+.mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(2) { transition-delay: 55ms;  }
+.mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(3) { transition-delay: 110ms; }
+
+/* Sub-capsule hover & active */
+.mt-sub-capsule:hover {
+  border-color: var(--mt-sf-blue);
+  box-shadow: 0 10px 24px rgba(0, 122, 255, 0.2);
+  /* Override stagger delay for instant hover response */
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  transition-delay: 0ms !important;
+  transform: scale(1.05) !important;
+}
+
+.mt-sub-capsule:active {
+  transform: scale(0.94) !important;
+  transition-delay: 0ms !important;
+}
+
+.mt-sub-capsule-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.mt-sub-capsule-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* === MAIN CAPSULE OPEN STATE === */
+/* Icon-box rotates 45° when menu is open */
+.mt-floating-trigger.mt-menu-open .mt-icon-box {
+  transform: rotate(45deg);
+  transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mt-floating-trigger:not(.mt-menu-open) .mt-icon-box {
+  transform: rotate(0deg);
+  transition: transform 0.25s cubic-bezier(0.32, 0, 0.67, 0);
+}
+
+/* ========================================
+   Level-2 Side-Popping Theme Sub-Menu
+   Appears to the left/right of Level-1 Theme button
+   ======================================== */
+
+.mt-level2-menu {
+  position: fixed;
+  z-index: 99996;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: var(--mt-bg-glass);
+  border: 1px solid var(--mt-border);
+  border-radius: 9999px;
+  box-shadow: var(--mt-shadow);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  user-select: none;
+  transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Side pop animation directions */
+.mt-level2-menu.mt-side-left {
+  transform: translateX(12px) scale(0.85);
+}
+
+.mt-level2-menu.mt-side-right {
+  transform: translateX(-12px) scale(0.85);
+}
+
+.mt-level2-menu.mt-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+}
+
+/* Level-2 Sub-capsule option pill */
+.mt-level2-capsule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--mt-card-bg);
+  color: var(--mt-text);
+  font-family: var(--mt-sf-font);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--mt-border);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mt-level2-capsule:hover {
+  background: var(--mt-card-hover);
+  border-color: var(--mt-sf-blue);
+  transform: translateY(-1px);
+}
+
+.mt-level2-capsule:active {
+  transform: scale(0.95);
+}
+
+/* Selected state with checkmark */
+.mt-level2-capsule.mt-selected {
+  background: rgba(0, 122, 255, 0.18) !important;
+  border-color: var(--mt-sf-blue) !important;
+  color: var(--mt-sf-blue) !important;
+  box-shadow: 0 0 10px rgba(0, 122, 255, 0.25);
+}
+
+.mt-level2-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.mt-checkmark-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  color: var(--mt-sf-blue);
+}
+
+.mt-level2-capsule.mt-selected .mt-checkmark-icon {
+  display: flex;
+}
+
+/* Highlight state on Level 1 button when Level 2 is open */
+.mt-sub-capsule.mt-active-l1 {
+  border-color: var(--mt-sf-blue) !important;
+  background: var(--mt-card-hover) !important;
+}
+
+

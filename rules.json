@@ -1,0 +1,43 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://moetran.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://moetran.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*m-t.pics*",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://moetran.com/"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*moetran.com/avatars*",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  }
+]

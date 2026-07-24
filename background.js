@@ -92,41 +92,53 @@ async function refreshUserStats() {
 // Message Listener for Extension Communication
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
-    switch (message.type) {
-      case "STORE_TOKEN":
-        const storageObj = {};
-        if (message.token) storageObj.userToken = message.token;
-        if (message.userProfile) storageObj.userProfile = message.userProfile;
-        if (Object.keys(storageObj).length > 0) {
-          await chrome.storage.local.set(storageObj);
-          console.log("[Background] User token/profile stored successfully.");
+    try {
+      switch (message.type) {
+        case "STORE_TOKEN": {
+          const storageObj = {};
+          if (message.token) storageObj.userToken = message.token;
+          if (message.userProfile) storageObj.userProfile = message.userProfile;
+          if (Object.keys(storageObj).length > 0) {
+            await chrome.storage.local.set(storageObj);
+            console.log("[Background] User token/profile stored successfully.");
+          }
+          const result = await refreshUserStats();
+          sendResponse(result);
+          break;
         }
-        const result = await refreshUserStats();
-        sendResponse(result);
-        break;
 
-      case "FETCH_STATS":
-        const refreshResult = await refreshUserStats();
-        sendResponse(refreshResult);
-        break;
+        case "FETCH_STATS": {
+          const refreshResult = await refreshUserStats();
+          sendResponse(refreshResult);
+          break;
+        }
 
-      case "GET_CACHED_STATS":
-        const { workStats, lastSyncTime, userProfile } = await chrome.storage.local.get([
-          "workStats",
-          "lastSyncTime",
-          "userProfile"
-        ]);
-        sendResponse({
-          success: true,
-          stats: workStats || null,
-          lastSyncTime: lastSyncTime || null,
-          userProfile: userProfile || null
-        });
-        break;
+        case "GET_CACHED_STATS": {
+          const { workStats, lastSyncTime, userProfile } = await chrome.storage.local.get([
+            "workStats",
+            "lastSyncTime",
+            "userProfile"
+          ]);
+          sendResponse({
+            success: true,
+            stats: workStats || null,
+            lastSyncTime: lastSyncTime || null,
+            userProfile: userProfile || null
+          });
+          break;
+        }
 
-      default:
-        sendResponse({ success: false, error: "Unknown message type" });
-        break;
+        default:
+          sendResponse({ success: false, error: "Unknown message type" });
+          break;
+      }
+    } catch (err) {
+      console.error("[Background] Error handling message:", err);
+      try {
+        sendResponse({ success: false, error: err.message });
+      } catch (e) {
+        // sender might have already closed
+      }
     }
   })();
 
