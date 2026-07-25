@@ -13,6 +13,30 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial load
   loadStats();
 
+  // Real-time Theme Storage Synchronization
+  function getEffectiveTheme(mode) {
+    if (mode === "dark") return "dark";
+    if (mode === "light") return "light";
+    const isSysDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return isSysDark ? "dark" : "light";
+  }
+
+  function applyTheme(mode) {
+    const theme = getEffectiveTheme(mode);
+    if (document.documentElement) {
+      document.documentElement.setAttribute("data-mt-theme", theme);
+      document.documentElement.setAttribute("data-mt-mode", mode || "system");
+    }
+  }
+
+  if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes["mt-theme-mode"]) {
+        applyTheme(changes["mt-theme-mode"].newValue);
+      }
+    });
+  }
+
   // Diagnostic toggle
   if (btnToggleDiag && diagBox) {
     btnToggleDiag.addEventListener("click", () => {

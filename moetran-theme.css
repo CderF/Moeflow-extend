@@ -412,3 +412,465 @@ html[data-mt-theme="dark"] [class*="BackButton"] *,
 html[data-mt-theme="dark"] [class*="BackBotton"] * {
   color: var(--mt-dark-text-main) !important;
 }
+
+/* 7. Hover Backgrounds for Lists and Cards */
+/* 修复侧边栏团队名、项目列表卡片悬浮时的浅灰底色问题，改为深灰色高亮 */
+html[data-mt-theme="dark"] .TeamList__Item:hover:not(.ListItem--active):not(.ant-menu-item-selected),
+html[data-mt-theme="dark"] .Dashboard__ListItem:hover:not(.ListItem--active):not(.ant-menu-item-selected),
+html[data-mt-theme="dark"] .Dashboard__MenuOption:hover:not(.ListItem--active),
+html[data-mt-theme="dark"] .List__Items > div:hover:not(.ListItem--active),
+html[data-mt-theme="dark"] .ant-menu-item:hover:not(.ant-menu-item-selected),
+html[data-mt-theme="dark"] .ProjectItem:hover,
+html[data-mt-theme="dark"] .ProjectCard:hover,
+html[data-mt-theme="dark"] .ListItem:hover:not(.ListItem--active) {
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+/* ============================================================
+   8. Comprehensive Hover State Overrides (Anti-Light-Gray)
+   针对深色模式下所有悬浮时仍出现浅灰背景的组件进行统一覆盖
+   ============================================================ */
+
+/* 8-a. Ant Design Dropdown 菜单项悬浮 */
+/* Ant Design 默认 hover: background-color: #f5f5f5 */
+html[data-mt-theme="dark"] .ant-dropdown-menu-item:hover,
+html[data-mt-theme="dark"] .ant-dropdown-menu-item-active,
+html[data-mt-theme="dark"] .ant-dropdown-menu-submenu-title:hover,
+html[data-mt-theme="dark"] .ant-dropdown-menu-submenu-active > .ant-dropdown-menu-submenu-title {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-b. Ant Design Select 下拉选项悬浮 */
+/* Ant Design 默认 hover: background-color: #f5f5f5 */
+html[data-mt-theme="dark"] .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+html[data-mt-theme="dark"] .ant-select-item-option:hover:not(.ant-select-item-option-disabled) {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+html[data-mt-theme="dark"] .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: rgba(0, 122, 255, 0.2) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-c. Ant Design 表格行悬浮 */
+/* Ant Design 默认 hover: background-color: #fafafa */
+html[data-mt-theme="dark"] .ant-table-tbody > tr.ant-table-row:hover > td,
+html[data-mt-theme="dark"] .ant-table-tbody > tr > td.ant-table-cell-row-hover,
+html[data-mt-theme="dark"] .ant-table-tbody > tr.ant-table-row-selected > td {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-d. Ant Design 树节点悬浮 */
+/* Ant Design 默认 hover: background-color: #f5f5f5 */
+html[data-mt-theme="dark"] .ant-tree-node-content-wrapper:hover,
+html[data-mt-theme="dark"] .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-e. Ant Design 列表项悬浮 */
+html[data-mt-theme="dark"] .ant-list-item:hover,
+html[data-mt-theme="dark"] .ant-list-items > .ant-list-item:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-f. Ant Design 普通按钮悬浮 */
+/* Ant Design 默认: background-color: #fff; border-color: #40a9ff */
+html[data-mt-theme="dark"] .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not([disabled]):hover,
+html[data-mt-theme="dark"] .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not([disabled]):focus {
+  background-color: var(--mt-dark-bg-hover) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-g. Ant Design Tabs 标签悬浮 */
+html[data-mt-theme="dark"] .ant-tabs-tab:hover {
+  color: var(--mt-dark-text-main) !important;
+}
+html[data-mt-theme="dark"] .ant-tabs-tab:not(.ant-tabs-tab-active):hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+/* 8-h. Ant Design 分页 悬浮 */
+html[data-mt-theme="dark"] .ant-pagination-item:hover,
+html[data-mt-theme="dark"] .ant-pagination-prev:hover .ant-pagination-item-link,
+html[data-mt-theme="dark"] .ant-pagination-next:hover .ant-pagination-item-link {
+  background-color: var(--mt-dark-bg-hover) !important;
+  border-color: var(--mt-dark-border) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+html[data-mt-theme="dark"] .ant-pagination-item:hover a {
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-i. Ant Design Radio / Checkbox 悬浮 */
+html[data-mt-theme="dark"] .ant-radio-button-wrapper:not(.ant-radio-button-wrapper-disabled):hover {
+  color: var(--mt-dark-text-main) !important;
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+/* 8-j. Ant Design Upload 区域悬浮 */
+html[data-mt-theme="dark"] .ant-upload.ant-upload-drag:hover {
+  border-color: var(--mt-dark-accent) !important;
+  background-color: rgba(0, 122, 255, 0.06) !important;
+}
+
+/* 8-k. Ant Design Menu 子菜单标题 & 溢出按钮悬浮 */
+html[data-mt-theme="dark"] .ant-menu-submenu-title:hover,
+html[data-mt-theme="dark"] .ant-menu-overflow-item:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 8-l. Vuetify v-list-item 悬浮 (使用 ::before 伪元素实现 ripple 高亮) */
+html[data-mt-theme="dark"] .v-list-item:hover::before,
+html[data-mt-theme="dark"] .v-list-item--link:hover::before {
+  background-color: var(--mt-dark-text-main) !important;
+  opacity: 0.08 !important;
+}
+html[data-mt-theme="dark"] .v-btn:hover::before {
+  background-color: var(--mt-dark-text-main) !important;
+  opacity: 0.08 !important;
+}
+
+/* 8-m. Moetran 翻译工作区 - 句子行悬浮 */
+/* 修复工作区中翻译句子行悬浮时的浅灰底色 */
+html[data-mt-theme="dark"] [class*="Segment"]:hover,
+html[data-mt-theme="dark"] [class*="TranslationRow"]:hover,
+html[data-mt-theme="dark"] [class*="SegmentItem"]:hover,
+html[data-mt-theme="dark"] [class*="ProofreadRow"]:hover,
+html[data-mt-theme="dark"] [class*="SourceRow"]:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+}
+
+/* 8-n. 通用兜底规则：所有 Ant Design 悬浮态 active 样式 */
+/* 确保任何 active 态的 ant-* 组件都使用深色背景 */
+html[data-mt-theme="dark"] [class^="ant-"]:hover:not([disabled]):not(.ant-btn-primary):not(.ant-btn-dangerous):not([class*="-selected"]):not([class*="-active"]) {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ============================================================
+   9. 用户上报精确组件修复 (User-Reported Targeted Fixes)
+   ============================================================ */
+
+/* ----- 9-a. Button__Content / Button_Content -----
+   自定义按钮内容容器，存在于页面各区块中。
+   使用双下划线和单下划线双选择器确保全覆盖。
+   -------------------------------------------------- */
+html[data-mt-theme="dark"] .Button__Content,
+html[data-mt-theme="dark"] .Button_Content,
+html[data-mt-theme="dark"] [class*="Button__Content"],
+html[data-mt-theme="dark"] [class*="Button_Content"] {
+  color: var(--mt-dark-text-main) !important;
+  background-color: transparent !important;
+}
+
+/* Button__Content 自身 hover（按钮整体 hover 已由父元素覆盖，
+   但部分独立使用的 Button__Content 仍需单独处理） */
+html[data-mt-theme="dark"] .Button__Content:hover,
+html[data-mt-theme="dark"] .Button_Content:hover,
+html[data-mt-theme="dark"] [class*="Button__Content"]:hover,
+html[data-mt-theme="dark"] [class*="Button_Content"]:hover {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ----- 9-b. List__Items / List_Items 下所有直接与间接子组件 -----
+   存在于侧边栏、仪表盘、项目列表、团队列表等多个区块。
+   使用 [class*="List__Items"] 通配确保哈希后缀也能匹配。
+   -------------------------------------------------------------- */
+
+/* 容器本身 */
+html[data-mt-theme="dark"] .List__Items,
+html[data-mt-theme="dark"] .List_Items,
+html[data-mt-theme="dark"] [class*="List__Items"],
+html[data-mt-theme="dark"] [class*="List_Items"] {
+  background-color: var(--mt-dark-bg-elevated) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 所有直接子元素：基础文字和边框 */
+html[data-mt-theme="dark"] .List__Items > *,
+html[data-mt-theme="dark"] .List_Items > *,
+html[data-mt-theme="dark"] [class*="List__Items"] > *,
+html[data-mt-theme="dark"] [class*="List_Items"] > * {
+  color: var(--mt-dark-text-main) !important;
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* 所有深层子元素（文字继承）*/
+html[data-mt-theme="dark"] .List__Items *,
+html[data-mt-theme="dark"] .List_Items *,
+html[data-mt-theme="dark"] [class*="List__Items"] *,
+html[data-mt-theme="dark"] [class*="List_Items"] * {
+  color: inherit;
+  border-color: var(--mt-dark-border) !important;
+}
+
+/* 悬浮高亮（排除 active/selected 态） */
+html[data-mt-theme="dark"] .List__Items > *:hover:not([class*="--active"]):not([class*="-selected"]),
+html[data-mt-theme="dark"] .List_Items > *:hover:not([class*="--active"]):not([class*="-selected"]),
+html[data-mt-theme="dark"] [class*="List__Items"] > *:hover:not([class*="--active"]):not([class*="-selected"]),
+html[data-mt-theme="dark"] [class*="List_Items"] > *:hover:not([class*="--active"]):not([class*="-selected"]) {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ----- 9-c. Project__Status（独立于 ProjectList__Status）-----
+   项目卡片上的状态标签（进行中 / 已完结）。
+   非 active 态默认用次级文字颜色，避免与深色背景冲突。
+   ------------------------------------------------------------ */
+html[data-mt-theme="dark"] .Project__Status,
+html[data-mt-theme="dark"] [class*="Project__Status"]:not([class*="--active"]):not([class*="-active"]) {
+  color: var(--mt-dark-text-sub) !important;
+  background-color: transparent !important;
+}
+
+/* ----- 9-d. ProjectList__Status--active 强化优先级覆盖 -----
+   当前 CSS 已有此规则，但在某些嵌套场景下权重不足。
+   通过加入父级路径和属性选择器提升权重。
+   --------------------------------------------------------- */
+html[data-mt-theme="dark"] .ProjectList__Status--active,
+html[data-mt-theme="dark"] [class*="ProjectList__Status"][class*="active"],
+html[data-mt-theme="dark"] [class*="ProjectList__Status--active"],
+html[data-mt-theme="dark"] .List__Items .ProjectList__Status--active,
+html[data-mt-theme="dark"] [class*="List__Items"] .ProjectList__Status--active,
+html[data-mt-theme="dark"] [class*="List_Items"] .ProjectList__Status--active,
+html[data-mt-theme="dark"] .Dashboard__CollapsibleMenu .ProjectList__Status--active {
+  color: var(--mt-dark-accent) !important;
+  border-bottom-color: var(--mt-dark-accent) !important;
+  background-color: transparent !important;
+}
+
+/* ----- 9-e. ant-input-suffix / ant-input-prefix -----
+   输入框后缀/前缀区域（搜索图标、清空按钮、计数文字等）。
+   原始色为深灰色，深色模式下需调整为浅灰以保持可见。
+   ---------------------------------------------------- */
+html[data-mt-theme="dark"] .ant-input-suffix,
+html[data-mt-theme="dark"] .ant-input-prefix {
+  color: var(--mt-dark-text-sub) !important;
+  background-color: transparent !important;
+}
+
+/* 后缀内的 SVG 图标和 anticon */
+html[data-mt-theme="dark"] .ant-input-suffix .anticon,
+html[data-mt-theme="dark"] .ant-input-prefix .anticon,
+html[data-mt-theme="dark"] .ant-input-suffix svg,
+html[data-mt-theme="dark"] .ant-input-prefix svg {
+  color: var(--mt-dark-text-sub) !important;
+}
+
+/* 清空按钮（close-circle）在 hover 时变为主色 */
+html[data-mt-theme="dark"] .ant-input-clear-icon:hover,
+html[data-mt-theme="dark"] .ant-input-suffix .anticon:hover {
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ----- 9-f. ant-input-affix-wrapper 全变体 -----
+   涵盖：默认 / sm（小尺寸）/ lg（大尺寸）/ borderless（无边框）
+   修复：基础背景、hover 边框高亮、focus 蓝色发光、内部 input 颜色
+   ---------------------------------------------- */
+
+/* 所有有边框变体的基础样式（sm/lg/默认合并，避免重复） */
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-sm,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-lg {
+  background-color: var(--mt-dark-bg-input) !important;
+  color: var(--mt-dark-text-main) !important;
+  border: 1px solid var(--mt-dark-border) !important;
+}
+
+/* 所有有边框变体的 hover 状态 */
+html[data-mt-theme="dark"] .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-borderless):hover,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-sm:hover,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-lg:hover {
+  background-color: var(--mt-dark-bg-input) !important;
+  border-color: rgba(0, 122, 255, 0.6) !important;
+}
+
+/* 所有有边框变体的 focus / focused 状态 */
+html[data-mt-theme="dark"] .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-borderless):focus,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-sm:focus,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-lg:focus,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-focused:not(.ant-input-affix-wrapper-borderless) {
+  background-color: var(--mt-dark-bg-input) !important;
+  border-color: var(--mt-dark-accent) !important;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2) !important;
+}
+
+/* borderless 变体：hover / focus 均保持无边框无背景 */
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-borderless:hover,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-borderless:focus,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-borderless-focused {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 所有 affix-wrapper 内部的 input 元素（透明继承外层背景） */
+html[data-mt-theme="dark"] .ant-input-affix-wrapper input,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-sm input,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-lg input,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-borderless input {
+  background-color: transparent !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* 所有 affix-wrapper 内部的 placeholder */
+html[data-mt-theme="dark"] .ant-input-affix-wrapper input::placeholder,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-sm input::placeholder,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-lg input::placeholder,
+html[data-mt-theme="dark"] .ant-input-affix-wrapper-borderless input::placeholder {
+  color: var(--mt-dark-text-muted) !important;
+}
+
+/* ============================================================
+   10. ID-Anchored Hover Overrides (Beats CSS-in-JS Late Injection)
+   ============================================================
+   问题根因：Ant Design 使用 CSS-in-JS（emotion），样式在运行时注入
+   <style> 标签，出现在扩展 CSS 之后。两个 !important 同台时，后者胜。
+   解决：在选择器链中锚定 #root / #app ID（specificity=100），
+   使我们的规则无论何时加载都能赢得优先级战。
+
+   标准类（class） specificity = 10
+   ID   specificity              = 100
+   我们的选择器最低 = (1,3,2) = 1032
+   框架最高通常     = (0,4,1) = 0041  → 我们必胜
+   ============================================================ */
+
+/* ----- 10-a. Dashboard__CollapsibleMenu 下 List__Items 子组件悬浮 -----
+   目标：侧边栏折叠菜单里各列表项（团队、项目、成员）
+   --------------------------------------------------------------------- */
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > span:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > span:hover:not([class*="--active"]) {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ----- 10-b. Team__ProjectSetList（含 css-* 生成类）下 List__Items 悬浮 -----
+   目标：项目列表区域内的分组列表项
+   [class*="Team__ProjectSetList"] 可同时匹配：
+     - Team__ProjectSetList
+     - Team__ProjectSetList css-8gxlub（两个独立类）
+   -------------------------------------------------------------------------- */
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > span:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > span:hover:not([class*="--active"]) {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ----- 10-c. 通配：任何含 css-* 生成类的父元素下 List__Items 悬浮 -----
+   目标：css-8gxlub 或未来任何 emotion 生成的哈希类作为父容器的情况。
+   使用 [class*="css-"] 匹配所有 emotion 生成类。
+   ---------------------------------------------------------------------- */
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > a:hover:not([class*="--active"]) {
+  background-color: var(--mt-dark-bg-hover) !important;
+  color: var(--mt-dark-text-main) !important;
+}
+
+/* ----- 10-d. 确保 active 态不受 hover 规则干扰（通过 ID 锚定加固）----- */
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .ListItem--active,
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .ListItem--active,
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .ListItem--active,
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .ListItem--active {
+  background-color: rgba(0, 122, 255, 0.2) !important;
+  color: var(--mt-dark-accent) !important;
+}
+
+/* ============================================================
+   11. Hover Text-Color Inversion Strategy
+   ============================================================
+   策略转变：不再对抗框架的浅灰底色，
+   改为在 hover 时将文字强制切换为深色，
+   利用「浅灰底 + 黑字」的高对比度保证可读性。
+
+   目标区域：
+     • Dashboard__CollapsibleMenu 下所有 List__Items 子项
+     • Team__ProjectSetList（含 css-* 生成类）下所有 List__Items 子项
+
+   选择器策略：
+     1. 锚定 #root / #app（specificity +100，必胜框架）
+     2. 用 :hover 直接子元素 + * 后代通配，覆盖所有嵌套文字节点
+     3. :not([class*="--active"]) 排除选中项，保留蓝色高亮
+   ============================================================ */
+
+/* ---- 11-a. Dashboard__CollapsibleMenu ---- */
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > div:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > li:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > a:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > span:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root .Dashboard__CollapsibleMenu .List__Items > span:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > div:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > li:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > a:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > span:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  .Dashboard__CollapsibleMenu .List__Items > span:hover:not([class*="--active"]) * {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* ---- 11-b. Team__ProjectSetList（含 css-* 哈希类）---- */
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > div:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > li:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > a:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > span:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="Team__ProjectSetList"] .List__Items > span:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > div:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > li:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > a:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > span:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="Team__ProjectSetList"] .List__Items > span:hover:not([class*="--active"]) * {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* ---- 11-c. 通配兜底：任何 css-* 生成类包裹的 List__Items ---- */
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > div:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > li:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #root [class*="css-"] .List__Items > a:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > div:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > div:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > li:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > li:hover:not([class*="--active"]) *,
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > a:hover:not([class*="--active"]),
+html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > a:hover:not([class*="--active"]) * {
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
+
+
+

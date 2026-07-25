@@ -1,33 +1,41 @@
 # 🤖 AI Agent Developer Guide: 种植园尨译助手 (Moetran Helper)
 
-本文档为后续协同维护与二次开发的 AI Agent（或人类开发者）提供架构解析、业务逻辑规范、数据契约与开发约束。
+本文档为后续协同维护与二次开发的 AI Agent（或人类开发者）提供完整架构解析、业务逻辑规范、数据契约、API 协议与开发约束。
 
 ---
 
 ## 1. 🏗️ 项目架构与组件划分
 
-本项目是一个基于 **Chrome Extension Manifest V3** 标准构建的跨浏览器插件，主要处理与 `https://moetran.com` (尨译平台) 的认证、数据同步与 UI 呈现。
+本项目是一个基于 **Chrome Extension Manifest V3** 标准构建的跨浏览器插件，主要处理与 `https://moetran.com` (尨译平台) 的认证、数据同步、内置辞書工具、防闪烁主题切换与 UI 呈现。
 
 ```text
 Moeflow-extend/
-├── manifest.json         # MV3 声明文件 (Service Worker 指定 "type": "module")
-├── background.js         # Service Worker 后台线程 (定时同步、消息中转与挂件自动注入)
-├── content.js            # 网页 Content Script (JWT Token 页面捕获、灵动岛挂件与嵌入弹窗)
-├── content.css           # 嵌入挂件样式 (iOS Dynamic Island 胶囊风格)
-├── popup.html            # 扩展弹窗 HTML 视图 (包含诊断测试面板)
-├── popup.js              # 弹窗交互逻辑 (数据渲染、一键简报生成、分步断言测试)
-├── popup.css             # 弹窗样式 (Apple SF Pro 设计系统 & Design Tokens)
+├── manifest.json             # MV3 声明文件 (Service Worker 指定 "type": "module")
+├── background.js             # Service Worker 后台线程 (定时同步、消息中转、辞書请求与挂件自动注入)
+├── content.js                # 网页 Content Script (JWT 捕获、灵动岛悬浮挂件、当前项目统计与日语辞書 Modal)
+├── content.css               # 嵌入挂件、辞書窗口与 Modal 样式 (iOS Dynamic Island 胶囊风格)
+├── popup.html                # 扩展弹窗 HTML 视图 (包含诊断测试面板)
+├── popup.js                  # 弹窗交互逻辑 (数据渲染、一键简报生成、分步断言测试)
+├── popup.css                 # 弹窗样式 (Apple SF Pro 设计系统 & Design Tokens)
+├── theme-preloader.js        # 网页防闪烁主题预加载脚本 (document_start 阶段设置 data-mt-theme)
+├── popup-theme-preloader.js  # Popup 防闪烁主题预加载脚本
+├── moetran-theme.css         # Moetran 网页端定制主题样式表
+├── rules.json                # declarativeNetRequest 头像 Referer 修改规则
 ├── utils/
-│   └── moetranApi.js     # API 服务模块 (Token 提取、接口请求、多页分页与统计计算引擎)
+│   └── moetranApi.js         # API 服务模块 (Token 提取、接口请求、多页分页与统计计算引擎)
 ├── img/
-│   └── icon.png          # 插件统一图标
-├── AGENTS.md             # AI Agent 开发指南 (本文档)
-└── README.md             # GitHub 项目说明文档
+│   ├── cotton.png            # 插件主图标 (棉花)
+│   ├── icon.png              # 浅色模式图标
+│   └── icon-white.png        # 深色模式图标
+├── tests/
+│   └── theme.spec.mjs        # Playwright E2E 自动化测试用例
+├── AGENTS.md                 # AI Agent 开发指南 (本文档)
+└── README.md                 # GitHub 项目说明文档
 ```
 
 ---
 
-## 2. 🔐 认证与 Token 提取机制 (`utils/moetranApi.js`)
+## 2. 🔐 认证与 Token 提取管道 (`utils/moetranApi.js`)
 
 由于 Moetran 平台将认证 Token 保存在前端 `localStorage` 中而非 Domain Cookie 中，插件采用了三重保障的 Token 抓取管道：
 
@@ -35,13 +43,17 @@ Moeflow-extend/
 2. **动态 Tab 脚本提取**：通过 `chrome.tabs.query` 查找已被用户打开的 `moetran.com` 页面，使用 `chrome.scripting.executeScript` 深度扫描 `localStorage` 中的 JWT Token 正则（匹配 `eyJ...`）。
 3. **Cookie 扫描兜底**：通过 `chrome.cookies.getAll` 扫描可能的认证 Header。
 
+### 头像防盗链处理机制
+- **`declarativeNetRequest` 静态规则 (`rules.json`)**：修饰所有发往 `*m-t.pics*` 及 `*moetran.com/avatars*` 的图片/XHR 请求 Header，设置 `Referer: https://moetran.com/` 与 `Origin: https://moetran.com`，彻底消除跨域 403 阻断。
+- **Base64 Canvas 转换兜底**：`content.js` 在页面上下文拉取头像并转为 Base64 `data:image/...` 存入 `userProfile`。
+
 > ⚠️ **开发注意**：后台 Service Worker 无权直接访问页面的 `localStorage`，必须通过 Content Script 或 `executeScript` 进行交互。
 
 ---
 
-## 3. 📊 数据统计引擎与计算规范
+## 3. 📊 数据统计引擎与计算规范 (`utils/moetranApi.js`)
 
-位于 `utils/moetranApi.js` 的 `getUserProjects` 和 `calculateWorkStats` 是核心计算引擎。必须严格遵循以下**业务规则**：
+`getUserProjects`、`calculateWorkStats` 与 `getSingleProjectDetail` 是核心计算引擎。必须严格遵循以下**业务规则**：
 
 ### 维度 1：全量参与项目数与全量种植园项目数
 - **`totalProjects`（全量参与项目总数）**：
@@ -54,46 +66,78 @@ Moeflow-extend/
 - **统计范围限制**：`totalSources`（总句数）、`totalTranslated`（翻译句数）、`totalChecked`（校对句数）、`overallTranslationProgress`（翻译完成率）、`overallProofreadProgress`（校对完成率）、`projectList` 列表及状态分布，**必须严格基于最近 20 个项目 (`allProjects.slice(0, 20)`) 计算与展示**。
 - **项目标题格式**：统一格式化为 `团队名 - 大项目名称 - 小项目名称`（通过 `formatFullProjectTitle` 自动解析）。
 
-### 维度 3：已完成 (Finished) / 进行中 (Active) 状态判定
+### 维度 3：当前工作项目实时统计 (Single Project Stats)
+- `content.js` 自动从当前页面 URL 匹配项目 ID (`/(?:projects|workspace|editor)\/([a-fA-F0-9]{24})/`)。
+- 发送 `FETCH_SINGLE_PROJECT` 消息给 `background.js` 调用 `getSingleProjectDetail(projectId)` 获取实时句数与进度。
+
+### 维度 4：已完成 (Finished) / 进行中 (Active) 状态判定
 - **已完成 (Finished)**：`sourceCount > 0` 且 **翻译进度 === 100%** 并且 **校对进度 === 100%**。
 - **进行中 (Active)**：翻译或校对进度任意一项未达到 100%（或项目句数为 0）。
 
-```javascript
-// 状态分布核心代码逻辑 (moetranApi.js)
-const isFinished = (sourceCount > 0) && (translationProgress === 100) && (proofreadProgress === 100);
-if (isFinished) {
-  finishedProjects++;
-} else {
-  activeProjects++;
-}
-```
+### 维度 5：团队身份标准化 (`normalizeTeamRole`)
+官方团队身份映射为以下 5 种统一名称：
+1. `"创建人"` (Creator / Owner / level 1)
+2. `"管理员"` (Admin / Manager / level 2)
+3. `"资深成员"` (Senior / level 3)
+4. `"成员"` (Member / level 4)
+5. `"见习成员"` (Trainee / Intern / level 5)
 
 ---
 
-## 4. 🎨 UI/UX 与设计系统规范
+## 4. 📖 日语辞書引擎 (MOJi + Weblio)
 
-- **头像与图标规则**：Moetran 服务器对头像图片开启了防盗链与 Referer 校验（空 Referer 导致 403 加载失败）。因此统一禁用远程头像图片抓取，统一使用本地 `img/icon.png` 和用户名文本展示。
-- **弹窗设计**：`popup.css` 使用 CSS Variables 构建了 Apple SF Pro 设计系统，支持 `prefers-color-scheme: dark` 深色模式自适应。
-- **悬浮挂件交互**：`content.js` 注入的弹窗支持外部空白区域点击自动收起（`document.addEventListener("click", ...)`）。
+位于 `background.js` 与 `content.js` 中的日语辞書助手实现机制：
+
+1. **MOJi 辞書 (日中 / 中日)**：
+   - 接口 1: `GET https://api.mojidict.com/app/mojidict/api/v2/search/all?text={query}&types=102` (检索词条列表)
+   - 接口 2: `GET https://api.mojidict.com/app/mojidict/api/v1/word/detailInfo?wordId={targetId}` (获取假名、发音、声调、中文释义与双语例句)
+2. **Weblio 国語 (日日)**：
+   - Service Worker 后台请求 `https://www.weblio.jp/content/{query}`
+   - `content.js` 使用 `DOMParser` 解析 HTML 节点 `.kiji` / `#main`，清洗广告与无用元素，重写相对路径 `<a>` 标签为新窗口跳转。
+3. **窗口拖拽与记忆**：
+   - 词典窗口可通过 Header 拖拽，位置持久化至 `chrome.storage.local` (`mt-jdict-pos`)。
 
 ---
 
-## 5. 🛠️ 代码验证与质量保证 (Checklist)
+## 5. 🌓 主题模式与防闪烁 (Anti-FOUC) 规范
 
-修改代码后，必须执行以下验证流程：
+- **三档主题**：`system` (跟随系统), `dark` (强制深色), `light` (强制浅色)。
+- **存储键名**：`chrome.storage.local` 中的 `mt-theme-mode`。
+- **防闪烁机制 (Anti-FOUC)**：
+  - `theme-preloader.js` (声明在 `manifest.json` `content_scripts` `run_at: "document_start"`) 率先执行，在 DOM 渲染前将 `data-mt-theme` 属性直接写入 `document.documentElement`。
+  - `popup-theme-preloader.js` 负责 Popup HTML 渲染前的主题注入。
+
+---
+
+## 6. 🛠️ 代码验证与质量保证 (Checklist)
+
+修改代码后，必须按顺序执行以下验证流程：
 
 1. **JavaScript 语法静态检查**：
    ```bash
-   node -c utils/moetranApi.js background.js content.js popup.js
+   node -c utils/moetranApi.js background.js content.js popup.js theme-preloader.js popup-theme-preloader.js
    ```
+
 2. **业务逻辑 Node.js 断言测试**：
    ```bash
    node -e '
-   import("./utils/moetranApi.js").then(({ calculateWorkStats, isPlantationProject }) => {
-     // 验证状态计算与分页统计断言
+   import("./utils/moetranApi.js").then(({ calculateWorkStats, isPlantationProject, normalizeTeamRole }) => {
+     console.log("Testing normalizeTeamRole:", normalizeTeamRole("admin") === "管理员");
+     const mockProjects = [
+       { id: 1, name: "Test 1", sourceCount: 10, translatedSourceCount: 10, checkedSourceCount: 10, team: { id: "6500669ca33c76075e705f00", name: "种植园汉化组" } }
+     ];
+     const stats = calculateWorkStats(mockProjects);
+     console.log("Stats test passed:", stats.finishedProjects === 1);
    });
    '
    ```
-3. **Manifest V3 检查**：
+
+3. **Playwright E2E 自动化测试** (验证主题预加载、胶囊浮窗与二级选单)：
+   ```bash
+   npx playwright test tests/theme.spec.mjs
+   ```
+
+4. **Manifest V3 检查**：
    - 确保 `background` 中声明了 `"type": "module"`。
-   - 确保 `web_accessible_resources` 包含 `img/icon.png`。
+   - 确保 `declarative_net_request` 资源指向 `rules.json`。
+   - 确保 `web_accessible_resources` 包含 `img/icon.png` 与 `img/icon-white.png`。

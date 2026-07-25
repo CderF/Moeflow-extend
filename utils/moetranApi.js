@@ -538,3 +538,92 @@ export function calculateWorkStats(projects = []) {
     lastRefreshedAt: new Date().toISOString()
   };
 }
+
+/**
+ * Format single project detail into standardized stats object
+ */
+export function formatSingleProjectStats(proj) {
+  if (!proj) return null;
+  const isPlantation = isPlantationProject(proj);
+  const teamObj = proj.team || {};
+  const teamName = teamObj.name || (isPlantation ? "种植园汉化组" : "个人项目");
+  const fullTitle = formatFullProjectTitle(proj, isPlantation);
+
+  const sourceCount = getProp(proj, "sourceCount", "source_count") || getProp(proj, "targetCount", "target_count") || 0;
+  const translatedCount = getProp(proj, "translatedSourceCount", "translated_source_count") || 0;
+  const checkedCount = getProp(proj, "checkedSourceCount", "checked_source_count") || 0;
+
+  const translationProgress = sourceCount > 0 ? Math.min(100, Math.round((translatedCount / sourceCount) * 100)) : 0;
+  const proofreadProgress = sourceCount > 0 ? Math.min(100, Math.round((checkedCount / sourceCount) * 100)) : 0;
+
+  const isFinished = (sourceCount > 0) && (translationProgress === 100) && (proofreadProgress === 100);
+
+  return {
+    id: proj.id || proj._id,
+    name: proj.name || "未命名项目",
+    fullTitle,
+    teamName,
+    isPlantation,
+    status: proj.status || (isFinished ? "finished" : "active"),
+    isFinished,
+    role: typeof proj.role === 'object' ? (proj.role?.name || "成员") : (proj.role || "成员"),
+    sourceCount,
+    translatedCount,
+    checkedCount,
+    translationProgress,
+    proofreadProgress,
+    updatedAt: getProp(proj, "updatedAt", "updated_at") || getProp(proj, "createTime", "create_time") || new Date().toISOString()
+  };
+}
+
+/**
+ * Fetch detailed stats for a single project by ID
+ * @param {string} projectId
+ */
+export async function getSingleProjectDetail(projectId) {
+  if (!projectId) return null;
+
+  // 1. Try direct API fetch
+  try {
+    const res = await fetchWithAuth(`/v1/projects/${projectId}`);
+    const projData = res.data || res.project || res;
+    if (projData) {
+      return formatSingleProjectStats(projData);
+    }
+  } catch (err) {
+    console.warn(`[MoetranAPI] Failed to fetch project ${projectId} directly:`, err);
+  }
+
+  // 2. Fallback to searching user projects list
+  try {
+    const userProjects = await getUserProjects(1, 100);
+    const match = userProjects.find(p => String(p.id || p._id) === String(projectId));
+    if (match) {
+      return formatSingleProjectStats(match);
+    }
+  } catch (err) {
+    console.warn(`[MoetranAPI] Fallback user projects lookup failed:`, err);
+  }
+
+  return null;
+}
+
+/**
+ * Generate brief report text for a single project
+ */
+export function generateSingleProjectReportText(projStats, userProfile) {
+  if (!projStats) return "";
+  const nameStr = userProfile && userProfile.name ? ` (${userProfile.name})` : "";
+  const statusStr = projStats.isFinished ? "🏁 已完成" : "🟢 进行中";
+
+  return `【🌱 种植园汉化组 - 当前项目简报${nameStr}】\n` +
+         `------------------------------\n` +
+         `📌 项目全称：${projStats.fullTitle}\n` +
+         `🏷️ 项目状态：${statusStr}${projStats.isPlantation ? ' | 🌱 种植园项目' : ''}\n` +
+         `📊 句子总数：${projStats.sourceCount} 句\n` +
+         `📝 翻译进度：${projStats.translatedCount} / ${projStats.sourceCount} (${projStats.translationProgress}%)\n` +
+         `🔍 校对进度：${projStats.checkedCount} / ${projStats.sourceCount} (${projStats.proofreadProgress}%)\n` +
+         `------------------------------\n` +
+         `发送自：种植园尨译助手 🚀`;
+}
+

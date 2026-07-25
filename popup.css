@@ -28,32 +28,31 @@
   --sf-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
   --sf-shadow-active: 0 12px 32px rgba(0, 122, 255, 0.15);
   --sf-footer-bg: rgba(255, 255, 255, 0.9);
+  --sf-theme-transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Dark Mode Overrides */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sf-blue: #0A84FF;
-    --sf-blue-gradient: linear-gradient(135deg, #0A84FF, #5E5CE6);
-    --sf-purple: #BF5AF2;
-    --sf-purple-gradient: linear-gradient(135deg, #BF5AF2, #FF375F);
-    --sf-green: #30D158;
-    --sf-green-gradient: linear-gradient(135deg, #30D158, #40C8E0);
+/* Dark Mode Overrides via attribute selector */
+html[data-mt-theme="dark"] {
+  --sf-blue: #0A84FF;
+  --sf-blue-gradient: linear-gradient(135deg, #0A84FF, #5E5CE6);
+  --sf-purple: #BF5AF2;
+  --sf-purple-gradient: linear-gradient(135deg, #BF5AF2, #FF375F);
+  --sf-green: #30D158;
+  --sf-green-gradient: linear-gradient(135deg, #30D158, #40C8E0);
 
-    --sf-bg: #1c1c1e;
-    --sf-header-bg: rgba(28, 28, 30, 0.85);
-    --sf-card-bg: rgba(44, 44, 46, 0.65);
-    --sf-card-hover: rgba(58, 58, 60, 0.8);
-    --sf-card-inner: rgba(36, 36, 38, 0.6);
-    --sf-border: rgba(255, 255, 255, 0.1);
-    --sf-border-strong: rgba(255, 255, 255, 0.2);
-    --sf-text-primary: #f2f2f7;
-    --sf-text-secondary: #98989d;
-    --sf-text-tertiary: #636366;
-    --sf-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-    --sf-shadow-active: 0 12px 32px rgba(10, 132, 255, 0.25);
-    --sf-footer-bg: rgba(28, 28, 30, 0.95);
-  }
+  --sf-bg: #1c1c1e;
+  --sf-header-bg: rgba(28, 28, 30, 0.85);
+  --sf-card-bg: rgba(44, 44, 46, 0.65);
+  --sf-card-hover: rgba(58, 58, 60, 0.8);
+  --sf-card-inner: rgba(36, 36, 38, 0.6);
+  --sf-border: rgba(255, 255, 255, 0.1);
+  --sf-border-strong: rgba(255, 255, 255, 0.2);
+  --sf-text-primary: #f2f2f7;
+  --sf-text-secondary: #98989d;
+  --sf-text-tertiary: #636366;
+  --sf-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --sf-shadow-active: 0 12px 32px rgba(10, 132, 255, 0.25);
+  --sf-footer-bg: rgba(28, 28, 30, 0.95);
 }
 
 * {
@@ -84,13 +83,11 @@
   background: rgba(0, 0, 0, 0.35);
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.38);
-  }
+html[data-mt-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+html[data-mt-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
 }
 
 
@@ -104,6 +101,7 @@ body {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  transition: var(--sf-theme-transition);
 }
 
 /* SF SVG Icon Helper */
@@ -173,13 +171,11 @@ body {
   display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  .icon-light {
-    display: none;
-  }
-  .icon-dark {
-    display: block;
-  }
+html[data-mt-theme="dark"] .icon-light {
+  display: none;
+}
+html[data-mt-theme="dark"] .icon-dark {
+  display: block;
 }
 
 .brand-title {

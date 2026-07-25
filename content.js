@@ -233,6 +233,47 @@ function initFloatingWidget() {
         </button>
       </div>
     </div>
+
+    <!-- Japanese Dictionary Modal Window (Weblio) -->
+    <div class="mt-jdict-modal" id="mt-jdict-modal-box">
+      <div class="mt-jdict-header" id="mt-jdict-header">
+        <div class="mt-jdict-title">
+          <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          <span>日语辞書</span>
+        </div>
+        <button class="mt-jdict-close" id="mt-jdict-close-btn">&times;</button>
+      </div>
+
+      <div class="mt-jdict-search-section">
+        <div class="mt-jdict-tabs" id="mt-jdict-tabs">
+          <button class="mt-jdict-tab mt-active" data-dict-type="cjjc" id="mt-tab-cjjc">日中 / 中日 (MOJi)</button>
+          <button class="mt-jdict-tab" data-dict-type="ja" id="mt-tab-ja">日日 (Weblio国語)</button>
+        </div>
+        <div class="mt-jdict-search-box">
+          <input type="text" class="mt-jdict-input" id="mt-jdict-input" placeholder="输入日语单词 / 假名 / 汉字..." autocomplete="off" />
+          <button class="mt-jdict-search-btn" id="mt-jdict-search-btn">
+            <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            搜索
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-jdict-body" id="mt-jdict-body">
+        <div class="mt-jdict-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="36" height="36" style="opacity:0.4; margin-bottom:10px;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <div>在上方输入框输入词汇，查询 MOJi 辞書 (日中) / Weblio (日日) 释义</div>
+        </div>
+      </div>
+    </div>
   `;
 
   document.body.appendChild(container);
@@ -243,6 +284,14 @@ function initFloatingWidget() {
   const closeBtn   = document.getElementById("mt-modal-close-btn");
   const refreshBtn = document.getElementById("mt-refresh-btn");
   const copyBtn    = document.getElementById("mt-copy-report-btn");
+
+  // Japanese Dictionary DOM references
+  const jdictModalBox  = document.getElementById("mt-jdict-modal-box");
+  const jdictHeader    = document.getElementById("mt-jdict-header");
+  const jdictCloseBtn  = document.getElementById("mt-jdict-close-btn");
+  const jdictInput     = document.getElementById("mt-jdict-input");
+  const jdictSearchBtn = document.getElementById("mt-jdict-search-btn");
+  const jdictTabs      = document.querySelectorAll("#mt-jdict-tabs .mt-jdict-tab");
 
   // --- Level-2 Theme Sub-capsule Manager ---
   const level2ThemeMenu = document.getElementById("mt-theme-level2-menu");
@@ -328,6 +377,14 @@ function initFloatingWidget() {
     loadAndRenderStats();
   };
 
+  const openJdictPanel = () => {
+    positionJdictModal(jdictModalBox);
+    jdictModalBox.classList.add("mt-active");
+    if (jdictInput) {
+      setTimeout(() => jdictInput.focus(), 100);
+    }
+  };
+
   const SUB_ACTIONS = [
     {
       id: "mt-action-theme",
@@ -340,7 +397,7 @@ function initFloatingWidget() {
       // Book icon — dictionary / reference
       icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
       label: "日语辞書",
-      handler: () => console.log("[MT] TODO: 日语辞書查询"),
+      handler: openJdictPanel,
     },
     {
       id: "mt-action-stats",
@@ -399,7 +456,38 @@ function initFloatingWidget() {
     updateLevel2Checkmark("system");
   }
 
+  // Bind Japanese Dictionary Event Listeners
+  if (jdictCloseBtn) {
+    jdictCloseBtn.addEventListener("click", () => {
+      jdictModalBox.classList.remove("mt-active");
+    });
+  }
 
+  if (jdictSearchBtn) {
+    jdictSearchBtn.addEventListener("click", doJdictSearch);
+  }
+
+  if (jdictInput) {
+    jdictInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        doJdictSearch();
+      }
+    });
+  }
+
+  if (jdictTabs) {
+    jdictTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        if (tab.classList.contains("mt-active")) return;
+        jdictTabs.forEach((t) => t.classList.remove("mt-active"));
+        tab.classList.add("mt-active");
+        if (jdictInput && jdictInput.value.trim()) {
+          doJdictSearch();
+        }
+      });
+    });
+  }
 
   // --- Position Initialization ---
   triggerBtn.style.left = (window.innerWidth - 200) + 'px';
@@ -419,8 +507,9 @@ function initFloatingWidget() {
     });
   });
 
-  // --- Drag Behavior ---
+  // --- Drag Behaviors ---
   const drag = initDragBehavior(triggerBtn, subMenu, modalBox);
+  initJdictDragBehavior(jdictModalBox, jdictHeader);
 
   // --- Main capsule click: toggle sub-capsule menu ---
   triggerBtn.addEventListener("click", () => {
@@ -435,12 +524,13 @@ function initFloatingWidget() {
     }
   });
 
-  // --- Close everything when clicking outside the widget ---
+  // --- Close sub-menu and stats modal when clicking outside (keep dictionary window open) ---
   document.addEventListener("click", (e) => {
     const isInsideWidget = triggerBtn.contains(e.target) ||
                            subMenu.contains(e.target) ||
                            (level2ThemeMenu && level2ThemeMenu.contains(e.target)) ||
-                           (modalBox && modalBox.contains(e.target));
+                           (modalBox && modalBox.contains(e.target)) ||
+                           (jdictModalBox && jdictModalBox.contains(e.target));
     console.log(`[Test Log] [Ext Click] Target: <${e.target.tagName} class="${e.target.className}">, isInsideWidget: ${isInsideWidget}`);
     if (!isInsideWidget) {
       closeSubMenu(triggerBtn, subMenu);
@@ -461,7 +551,8 @@ function initFloatingWidget() {
       </svg>
       刷新中
     `;
-    safeSendMessage({ type: "FETCH_STATS" }, (res) => {
+    loadAndRenderStats();
+    setTimeout(() => {
       refreshBtn.innerHTML = `
         <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6M2.5 22v-6h6"/>
@@ -469,25 +560,25 @@ function initFloatingWidget() {
         </svg>
         刷新
       `;
-      if (res && res.stats) renderStatsInModal(res.stats, res.userProfile);
-    });
+    }, 600);
   });
 
   copyBtn.addEventListener("click", () => {
+    if (copyBtn.disabled || !window.__mt_current_project_stats) return;
     safeSendMessage({ type: "GET_CACHED_STATS" }, (res) => {
-      if (res && res.stats) {
-        const text = generateReportText(res.stats, res.userProfile);
-        navigator.clipboard.writeText(text).then(() => {
-          const orig = copyBtn.innerHTML;
-          copyBtn.innerHTML = `
-            <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            已复制！
-          `;
-          setTimeout(() => { copyBtn.innerHTML = orig; }, 2000);
-        });
-      }
+      const userProfile = res ? res.userProfile : null;
+      const text = generateSingleProjectReportText(window.__mt_current_project_stats, userProfile);
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = `
+          <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          已复制！
+        `;
+        setTimeout(() => { copyBtn.innerHTML = orig; }, 2000);
+      });
     });
   });
 }
@@ -724,85 +815,513 @@ function positionSubMenu(triggerBtn, subMenu, direction) {
   }
 }
 
+function extractCurrentProjectId() {
+  const href = window.location.href || "";
+  const pathname = window.location.pathname || "";
+  const match = (href + " " + pathname).match(/(?:projects|workspace|editor)\/([a-fA-F0-9]{24})/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  return null;
+}
+
 function loadAndRenderStats() {
-  safeSendMessage({ type: "GET_CACHED_STATS" }, (res) => {
-    if (res && res.stats) {
-      renderStatsInModal(res.stats, res.userProfile);
+  const currentProjectId = extractCurrentProjectId();
+  const body = document.getElementById("mt-modal-body-content");
+
+  if (body) {
+    body.innerHTML = `
+      <div style="text-align:center; padding: 28px 0; color:var(--mt-text-sub); font-size: 13px;">
+        <svg class="mt-sf-icon" style="animation: sf-spin 1s infinite linear; width: 22px; height: 22px; margin-bottom: 8px; color: var(--mt-sf-blue);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6"/>
+          <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1 1A10 10 0 0 0 22 12.5"/>
+        </svg>
+        <div>正在获取当前项目统计...</div>
+      </div>
+    `;
+  }
+
+  if (!currentProjectId) {
+    renderNoActiveProjectState();
+    return;
+  }
+
+  safeSendMessage({ type: "FETCH_SINGLE_PROJECT", projectId: currentProjectId }, (res) => {
+    if (res && res.success && res.projectStats) {
+      renderSingleProjectStatsInModal(res.projectStats, res.userProfile);
     } else {
-      safeSendMessage({ type: "FETCH_STATS" }, (fetchRes) => {
-        if (fetchRes && fetchRes.stats) {
-          renderStatsInModal(fetchRes.stats, fetchRes.userProfile);
+      // Fallback: search cached user projects
+      safeSendMessage({ type: "GET_CACHED_STATS" }, (cacheRes) => {
+        if (cacheRes && cacheRes.stats && cacheRes.stats.projectList) {
+          const match = cacheRes.stats.projectList.find(p => String(p.id) === String(currentProjectId));
+          if (match) {
+            renderSingleProjectStatsInModal(match, cacheRes.userProfile);
+            return;
+          }
         }
+        renderNoActiveProjectState("无法获取当前项目的统计数据");
       });
     }
   });
 }
 
-function renderStatsInModal(stats, userProfile) {
+function renderSingleProjectStatsInModal(projStats, userProfile) {
   const body = document.getElementById("mt-modal-body-content");
   const titleText = document.getElementById("mt-modal-title-text");
+  const copyBtn = document.getElementById("mt-copy-report-btn");
   if (!body) return;
 
-  const titleName = (userProfile && userProfile.name) ? userProfile.name : "种植园汉化组";
-  titleText.innerHTML = `
-    <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-    </svg>
-    ${titleName} - 工作统计
-  `;
+  window.__mt_current_project_stats = projStats;
+
+  if (copyBtn) {
+    copyBtn.disabled = false;
+    copyBtn.style.opacity = "1";
+    copyBtn.style.cursor = "pointer";
+  }
+
+  if (titleText) {
+    titleText.innerHTML = `
+      <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+      </svg>
+      当前项目统计
+    `;
+  }
+
+  const isPlantation = projStats.isPlantation;
+  const statusTag = projStats.isFinished
+    ? `<span class="mt-p-tag mt-p-tag-finished">🏁 已完成</span>`
+    : `<span class="mt-p-tag mt-p-tag-active">🟢 进行中</span>`;
+  const plantationTag = isPlantation ? `<span class="mt-p-tag mt-p-tag-plantation">🌱 种植园</span>` : '';
 
   body.innerHTML = `
-    <div class="mt-stats-grid">
+    <div class="mt-single-proj-header">
+      <div class="mt-single-proj-title" title="${escapeHtml(projStats.fullTitle)}">${escapeHtml(projStats.fullTitle)}</div>
+      <div class="mt-single-proj-tags">
+        ${plantationTag}
+        ${statusTag}
+        <span class="mt-p-tag mt-p-tag-role">👤 ${escapeHtml(projStats.role || "成员")}</span>
+      </div>
+    </div>
+
+    <div class="mt-stats-grid mt-single-grid">
       <div class="mt-stat-card">
-        <span class="mt-stat-label">参与项目总数</span>
-        <span class="mt-stat-value">${stats.totalProjects || 0}</span>
+        <span class="mt-stat-label">总句数</span>
+        <span class="mt-stat-value">${projStats.sourceCount || 0}</span>
       </div>
       <div class="mt-stat-card">
-        <span class="mt-stat-label">种植园项目</span>
-        <span class="mt-stat-value" style="color: var(--mt-sf-blue);">${stats.plantationProjects || 0}</span>
+        <span class="mt-stat-label">已翻译</span>
+        <span class="mt-stat-value" style="color: var(--mt-sf-blue);">${projStats.translatedCount || 0}</span>
       </div>
       <div class="mt-stat-card">
-        <span class="mt-stat-label">已完成/进行中</span>
-        <span class="mt-stat-value" style="color: var(--mt-sf-green);">${stats.finishedProjects || 0}/${stats.activeProjects || 0}</span>
-      </div>
-      <div class="mt-stat-card">
-        <span class="mt-stat-label">翻译完成度</span>
-        <span class="mt-stat-value" style="color: #AF52DE;">${stats.overallTranslationProgress || 0}%</span>
+        <span class="mt-stat-label">已校对</span>
+        <span class="mt-stat-value" style="color: var(--mt-sf-green);">${projStats.checkedCount || 0}</span>
       </div>
     </div>
 
     <div class="mt-progress-wrapper">
       <div class="mt-progress-header">
-        <span>总体翻译完成度 (${stats.totalTranslated || 0}/${stats.totalSources || 0})</span>
-        <span>${stats.overallTranslationProgress || 0}%</span>
+        <span>翻译完成度 (${projStats.translatedCount || 0}/${projStats.sourceCount || 0})</span>
+        <span>${projStats.translationProgress || 0}%</span>
       </div>
       <div class="mt-progress-bar-bg">
-        <div class="mt-progress-bar-fill" style="width: ${stats.overallTranslationProgress || 0}%;"></div>
+        <div class="mt-progress-bar-fill" style="width: ${projStats.translationProgress || 0}%;"></div>
       </div>
     </div>
 
     <div class="mt-progress-wrapper">
       <div class="mt-progress-header">
-        <span>总体校对完成度 (${stats.totalChecked || 0}/${stats.totalSources || 0})</span>
-        <span>${stats.overallProofreadProgress || 0}%</span>
+        <span>校对完成度 (${projStats.checkedCount || 0}/${projStats.sourceCount || 0})</span>
+        <span>${projStats.proofreadProgress || 0}%</span>
       </div>
       <div class="mt-progress-bar-bg">
-        <div class="mt-progress-bar-fill mt-progress-bar-proofread" style="width: ${stats.overallProofreadProgress || 0}%;"></div>
+        <div class="mt-progress-bar-fill mt-progress-bar-proofread" style="width: ${projStats.proofreadProgress || 0}%;"></div>
       </div>
     </div>
   `;
 }
 
-function generateReportText(stats, userProfile) {
+function renderNoActiveProjectState(customMsg = "当前没有正在工作的项目") {
+  const body = document.getElementById("mt-modal-body-content");
+  const titleText = document.getElementById("mt-modal-title-text");
+  const copyBtn = document.getElementById("mt-copy-report-btn");
+  if (!body) return;
+
+  window.__mt_current_project_stats = null;
+
+  if (copyBtn) {
+    copyBtn.disabled = true;
+    copyBtn.style.opacity = "0.5";
+    copyBtn.style.cursor = "not-allowed";
+  }
+
+  if (titleText) {
+    titleText.innerHTML = `
+      <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+      </svg>
+      当前项目统计
+    `;
+  }
+
+  body.innerHTML = `
+    <div class="mt-empty-state">
+      <div class="mt-empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="42" height="42" style="opacity: 0.6; color: var(--mt-text-sub);">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+      </div>
+      <div class="mt-empty-title">${escapeHtml(customMsg)}</div>
+      <div class="mt-empty-sub">请在 Moetran 中进入具体的项目页面后再次打开统计</div>
+      <a href="https://moetran.com/dashboard/projects" class="mt-empty-btn">
+        <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+        前往项目列表
+      </a>
+    </div>
+  `;
+}
+
+function generateSingleProjectReportText(projStats, userProfile) {
+  if (!projStats) return "";
   const nameStr = userProfile && userProfile.name ? ` (${userProfile.name})` : "";
-  return `【🌱 种植园汉化组 - 个人工作简报${nameStr}】\n` +
+  const statusStr = projStats.isFinished ? "🏁 已完成" : "🟢 进行中";
+
+  return `【🌱 种植园汉化组 - 当前项目简报${nameStr}】\n` +
          `------------------------------\n` +
-         `📊 参与项目总数：${stats.totalProjects} 个 (种植园项目 ${stats.plantationProjects} 个)\n` +
-         `🟢 进行中项目：${stats.activeProjects} | 🏁 已完成项目：${stats.finishedProjects}\n` +
-         `📝 翻译总句数：${stats.totalTranslated} / ${stats.totalSources} (${stats.overallTranslationProgress}%)\n` +
-         `🔍 校对总句数：${stats.totalChecked} / ${stats.totalSources} (${stats.overallProofreadProgress}%)\n` +
+         `📌 项目全称：${projStats.fullTitle}\n` +
+         `🏷️ 项目状态：${statusStr}${projStats.isPlantation ? ' | 🌱 种植园项目' : ''}\n` +
+         `📊 句子总数：${projStats.sourceCount} 句\n` +
+         `📝 翻译进度：${projStats.translatedCount} / ${projStats.sourceCount} (${projStats.translationProgress}%)\n` +
+         `🔍 校对进度：${projStats.checkedCount} / ${projStats.sourceCount} (${projStats.proofreadProgress}%)\n` +
          `------------------------------\n` +
          `发送自：种植园尨译助手 🚀`;
+}
+
+
+// --- Japanese Dictionary (Weblio) Window Functions ---
+function positionJdictModal(modalBox) {
+  if (!modalBox) return;
+  chrome.storage.local.get("mt-jdict-pos", (data) => {
+    requestAnimationFrame(() => {
+      const boxW = modalBox.offsetWidth || 440;
+      const boxH = modalBox.offsetHeight || 520;
+      if (data && data["mt-jdict-pos"]) {
+        const pos = data["mt-jdict-pos"];
+        const left = Math.max(0, Math.min(pos.left, window.innerWidth - boxW));
+        const top = Math.max(0, Math.min(pos.top, window.innerHeight - boxH));
+        modalBox.style.left = left + "px";
+        modalBox.style.top = top + "px";
+      } else {
+        modalBox.style.left = Math.max(0, (window.innerWidth - boxW) / 2) + "px";
+        modalBox.style.top = Math.max(0, (window.innerHeight - boxH) / 2) + "px";
+      }
+      modalBox.style.right = "auto";
+      modalBox.style.bottom = "auto";
+    });
+  });
+}
+
+function initJdictDragBehavior(modalBox, headerElem) {
+  if (!modalBox || !headerElem) return;
+  const DRAG_THRESHOLD = 5;
+  let startX, startY, startLeft, startTop;
+  let isPointerDown = false;
+  let isDragging = false;
+
+  headerElem.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("#mt-jdict-close-btn")) return;
+    if (e.button !== 0) return;
+
+    const rect = modalBox.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = rect.left;
+    startTop = rect.top;
+
+    modalBox.style.left = startLeft + "px";
+    modalBox.style.top = startTop + "px";
+    modalBox.style.right = "auto";
+    modalBox.style.bottom = "auto";
+
+    isPointerDown = true;
+    isDragging = false;
+    headerElem.setPointerCapture(e.pointerId);
+  });
+
+  headerElem.addEventListener("pointermove", (e) => {
+    if (!isPointerDown || !headerElem.hasPointerCapture(e.pointerId)) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!isDragging) {
+      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+        isDragging = true;
+        modalBox.classList.add("mt-dragging");
+      }
+      return;
+    }
+
+    const boxW = modalBox.offsetWidth;
+    const boxH = modalBox.offsetHeight;
+    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth - boxW));
+    const newTop = Math.max(0, Math.min(startTop + dy, window.innerHeight - boxH));
+
+    modalBox.style.left = newLeft + "px";
+    modalBox.style.top = newTop + "px";
+  });
+
+  const onRelease = () => {
+    if (isDragging) {
+      const left = parseFloat(modalBox.style.left);
+      const top = parseFloat(modalBox.style.top);
+      if (!isNaN(left) && !isNaN(top)) {
+        chrome.storage.local.set({ "mt-jdict-pos": { left, top } });
+      }
+    }
+    modalBox.classList.remove("mt-dragging");
+    isPointerDown = false;
+    isDragging = false;
+  };
+
+  headerElem.addEventListener("pointerup", onRelease);
+  headerElem.addEventListener("pointercancel", onRelease);
+
+  window.addEventListener("resize", () => {
+    if (!modalBox.classList.contains("mt-active")) return;
+    const boxW = modalBox.offsetWidth;
+    const boxH = modalBox.offsetHeight;
+    const curLeft = parseFloat(modalBox.style.left) || (window.innerWidth - boxW) / 2;
+    const curTop = parseFloat(modalBox.style.top) || (window.innerHeight - boxH) / 2;
+    const cl = Math.max(0, Math.min(curLeft, window.innerWidth - boxW));
+    const ct = Math.max(0, Math.min(curTop, window.innerHeight - boxH));
+    modalBox.style.left = cl + "px";
+    modalBox.style.top = ct + "px";
+  });
+}
+
+function doJdictSearch() {
+  const inputElem = document.getElementById("mt-jdict-input");
+  const bodyElem = document.getElementById("mt-jdict-body");
+  if (!inputElem || !bodyElem) return;
+
+  const query = inputElem.value.trim();
+  if (!query) {
+    inputElem.focus();
+    return;
+  }
+
+  const activeTab = document.querySelector("#mt-jdict-tabs .mt-jdict-tab.mt-active");
+  const dictType = activeTab ? activeTab.getAttribute("data-dict-type") : "cjjc";
+  const dictName = (dictType === "ja") ? "Weblio 国語" : "MOJi 辞書";
+
+  bodyElem.innerHTML = `
+    <div class="mt-jdict-loading">
+      <svg class="mt-sf-icon" style="animation: sf-spin 1s infinite linear; width: 24px; height: 24px; color: var(--mt-sf-blue);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6"/>
+        <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1 1A10 10 0 0 0 22 12.5"/>
+      </svg>
+      <div style="margin-top: 10px; font-size: 13px; color: var(--mt-text-sub);">正在查询 ${dictName}...</div>
+    </div>
+  `;
+
+  safeSendMessage({ type: "FETCH_DICT", query, dictType }, (res) => {
+    if (!res || !res.success) {
+      const errMsg = (res && res.error) ? res.error : "网络请求失败，请稍后再试";
+      renderJdictError(errMsg, res ? res.targetUrl : null);
+      return;
+    }
+
+    if (res.source === "moji") {
+      renderMojiResults(res, query);
+    } else {
+      parseAndRenderWeblio(res.html, res.dictType, res.query, res.targetUrl);
+    }
+  });
+}
+
+function renderMojiResults(res, query) {
+  const bodyElem = document.getElementById("mt-jdict-body");
+  if (!bodyElem) return;
+
+  const targetUrl = res.targetUrl || `https://www.mojidict.com/search/${encodeURIComponent(query)}`;
+  const words = res.words;
+
+  if (!words || words.length === 0) {
+    bodyElem.innerHTML = `
+      <div class="mt-jdict-notfound">
+        <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+        <div class="mt-jdict-notfound-title">MOJi 辞書未找到与“${escapeHtml(query)}”匹配的词条</div>
+        <div class="mt-jdict-notfound-sub">您可以尝试切换到“日日 (Weblio国語)”Tab 查询 Weblio 国语词典，或前往 MOJi 官网。</div>
+        <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-jdict-link-btn">在 MOJi 辞書网页版中查看 ↗</a>
+      </div>
+    `;
+    return;
+  }
+
+  let htmlContent = "";
+  words.forEach(w => {
+    let pronuncHtml = w.pronunc ? `<span class="mt-moji-pronunc">${escapeHtml(w.pronunc)}</span>` : "";
+    let accentHtml = w.accent ? `<span class="mt-moji-accent">${escapeHtml(w.accent)}</span>` : "";
+
+    let detailsHtml = "";
+    if (w.details && w.details.length > 0) {
+      w.details.forEach(d => {
+        let tagHtml = d.title ? `<span class="mt-moji-tag">${escapeHtml(d.title)}</span>` : "";
+        let textHtml = d.text ? `<div class="mt-moji-def-text">${escapeHtml(d.text)}</div>` : "";
+        detailsHtml += `
+          <div class="mt-moji-detail-item">
+            ${tagHtml}
+            ${textHtml}
+          </div>
+        `;
+      });
+    } else if (w.excerpt) {
+      detailsHtml = `<div class="mt-moji-def-text">${escapeHtml(w.excerpt)}</div>`;
+    }
+
+    let examplesHtml = "";
+    if (w.examples && w.examples.length > 0) {
+      let exListHtml = "";
+      w.examples.forEach(ex => {
+        exListHtml += `
+          <div class="mt-moji-ex-item">
+            <div class="mt-moji-ex-title">${escapeHtml(ex.title)}</div>
+            ${ex.trans ? `<div class="mt-moji-ex-trans">${escapeHtml(ex.trans)}</div>` : ""}
+          </div>
+        `;
+      });
+      examplesHtml = `
+        <div class="mt-moji-examples">
+          <div class="mt-moji-ex-header">例句 / 例文</div>
+          ${exListHtml}
+        </div>
+      `;
+    }
+
+    htmlContent += `
+      <div class="mt-jdict-card mt-moji-card">
+        <div class="mt-moji-header">
+          <span class="mt-moji-spell">${escapeHtml(w.spell)}</span>
+          ${pronuncHtml}
+          ${accentHtml}
+        </div>
+        <div class="mt-moji-details">
+          ${detailsHtml}
+        </div>
+        ${examplesHtml}
+      </div>
+    `;
+  });
+
+  bodyElem.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      ${htmlContent}
+      <div class="mt-jdict-footer-link">
+        <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-jdict-link-btn">在 MOJi 辞書查看完整原网页 ↗</a>
+      </div>
+    </div>
+  `;
+}
+
+function parseAndRenderWeblio(html, dictType, query, targetUrl) {
+  const bodyElem = document.getElementById("mt-jdict-body");
+  if (!bodyElem) return;
+
+  if (!html || typeof html !== "string") {
+    renderJdictError("未能获取到词条数据", targetUrl);
+    return;
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // Remove noise
+    doc.querySelectorAll("script, style, iframe, .ad, .google-auto-placed, #header, #footer, #side, .wrpLnk, .netdic-sub-head, .wrpHead, .link-to-top").forEach(el => el.remove());
+
+    const bodyText = doc.body ? doc.body.textContent : "";
+    const isNotFound = bodyText.includes("一致する見出し語は見つかりませんでした") ||
+                       bodyText.includes("該当する項目は見つかりませんでした") ||
+                       bodyText.includes("404 Not Found") ||
+                       (!doc.querySelector(".kiji") && !doc.querySelector(".tit-Midashi") && !doc.querySelector("#main"));
+
+    if (isNotFound) {
+      bodyElem.innerHTML = `
+        <div class="mt-jdict-notfound">
+          <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+          <div class="mt-jdict-notfound-title">未找到与“${escapeHtml(query)}”匹配的词条</div>
+          <div class="mt-jdict-notfound-sub">您可以切换顶部的词典分类（如从“日中”切换到“日日”），或在 Weblio 官网直接查看。</div>
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-jdict-link-btn">在 Weblio 网页版中查看 ↗</a>
+        </div>
+      `;
+      return;
+    }
+
+    let kijiNodes = doc.querySelectorAll(".kiji");
+    if (!kijiNodes || kijiNodes.length === 0) {
+      kijiNodes = doc.querySelectorAll("#main");
+    }
+
+    let htmlContent = "";
+    if (kijiNodes && kijiNodes.length > 0) {
+      kijiNodes.forEach(node => {
+        node.querySelectorAll("a").forEach(a => {
+          const href = a.getAttribute("href");
+          if (href) {
+            if (href.startsWith("/")) {
+              a.href = (dictType === "ja" ? "https://www.weblio.jp" : "https://cjjc.weblio.jp") + href;
+            }
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+          } else {
+            a.removeAttribute("href");
+          }
+        });
+        htmlContent += `<div class="mt-jdict-card">${node.innerHTML}</div>`;
+      });
+    } else {
+      htmlContent = `<div class="mt-jdict-card">${doc.body.innerHTML}</div>`;
+    }
+
+    bodyElem.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        ${htmlContent}
+        <div class="mt-jdict-footer-link">
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-jdict-link-btn">在 Weblio 查看完整原网页 ↗</a>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    console.error("[MT] Parse Weblio error:", err);
+    renderJdictError("解析词条时出错", targetUrl);
+  }
+}
+
+function renderJdictError(errMsg, targetUrl) {
+  const bodyElem = document.getElementById("mt-jdict-body");
+  if (!bodyElem) return;
+  bodyElem.innerHTML = `
+    <div class="mt-jdict-notfound">
+      <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
+      <div class="mt-jdict-notfound-title">${escapeHtml(errMsg)}</div>
+      ${targetUrl ? `<a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-jdict-link-btn">直接前往 Weblio 查看 ↗</a>` : ""}
+    </div>
+  `;
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // Execute on load

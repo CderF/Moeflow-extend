@@ -26,7 +26,9 @@
     "https://moetran.com/*",
     "https://api.moetran.com/*",
     "https://*.m-t.pics/*",
-    "https://c01.m-t.pics/*"
+    "https://c01.m-t.pics/*",
+    "https://*.weblio.jp/*",
+    "https://*.mojidict.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https: data: blob:;"
