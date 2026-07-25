@@ -274,6 +274,19 @@ function initFloatingWidget() {
         </div>
       </div>
     </div>
+
+    <!-- Japanese Symbols Panel -->
+    <div class="mt-jsym-modal" id="mt-jsym-modal-box">
+      <div class="mt-jsym-header" id="mt-jsym-header">
+        <div class="mt-jsym-title">
+          <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+          <span>日文符号</span>
+        </div>
+        <button class="mt-jsym-close" id="mt-jsym-close-btn">&times;</button>
+      </div>
+      <div class="mt-jsym-hint" id="mt-jsym-hint"></div>
+      <div class="mt-jsym-body" id="mt-jsym-body"></div>
+    </div>
   `;
 
   document.body.appendChild(container);
@@ -292,6 +305,11 @@ function initFloatingWidget() {
   const jdictInput     = document.getElementById("mt-jdict-input");
   const jdictSearchBtn = document.getElementById("mt-jdict-search-btn");
   const jdictTabs      = document.querySelectorAll("#mt-jdict-tabs .mt-jdict-tab");
+
+  // Japanese Symbols Panel DOM references
+  const jsymModalBox = document.getElementById("mt-jsym-modal-box");
+  const jsymHeader   = document.getElementById("mt-jsym-header");
+  const jsymCloseBtn = document.getElementById("mt-jsym-close-btn");
 
   // --- Level-2 Theme Sub-capsule Manager ---
   const level2ThemeMenu = document.getElementById("mt-theme-level2-menu");
@@ -385,6 +403,11 @@ function initFloatingWidget() {
     }
   };
 
+  const openJsymPanel = () => {
+    positionJsymModal(jsymModalBox);
+    jsymModalBox.classList.add("mt-active");
+  };
+
   const SUB_ACTIONS = [
     {
       id: "mt-action-theme",
@@ -398,6 +421,13 @@ function initFloatingWidget() {
       icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
       label: "日语辞書",
       handler: openJdictPanel,
+    },
+    {
+      id: "mt-action-jsym",
+      // 3×3 dot-grid icon — symbol palette
+      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>`,
+      label: "日文符号",
+      handler: openJsymPanel,
     },
     {
       id: "mt-action-stats",
@@ -489,6 +519,34 @@ function initFloatingWidget() {
     });
   }
 
+  // Bind Japanese Symbols Panel Event Listeners
+  if (jsymCloseBtn) {
+    jsymCloseBtn.addEventListener("click", () => {
+      jsymModalBox.classList.remove("mt-active");
+    });
+  }
+
+  // Build symbol buttons dynamically from the symbol list
+  const JSYM_LIST = [
+    '♥','♡','♪','☆','★','※','…','「','」','『','』','、',
+    '﹏﹏','‧','︿','﹀','～','|','{','}','《','》',
+    '↑','↓','←','→','?','●','【','】','〰️','„','“','〝','〟'
+  ];
+  const jsymBody = document.getElementById("mt-jsym-body");
+  if (jsymBody) {
+    JSYM_LIST.forEach((sym) => {
+      const btn = document.createElement("button");
+      btn.className = "mt-jsym-sym-btn";
+      btn.textContent = sym;
+      btn.title = sym;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        insertSymbol(sym);
+      });
+      jsymBody.appendChild(btn);
+    });
+  }
+
   // --- Position Initialization ---
   triggerBtn.style.left = (window.innerWidth - 200) + 'px';
   triggerBtn.style.top  = (window.innerHeight - 60) + 'px';
@@ -510,6 +568,7 @@ function initFloatingWidget() {
   // --- Drag Behaviors ---
   const drag = initDragBehavior(triggerBtn, subMenu, modalBox);
   initJdictDragBehavior(jdictModalBox, jdictHeader);
+  initJsymDragBehavior(jsymModalBox, jsymHeader);
 
   // --- Main capsule click: toggle sub-capsule menu ---
   triggerBtn.addEventListener("click", () => {
@@ -530,7 +589,8 @@ function initFloatingWidget() {
                            subMenu.contains(e.target) ||
                            (level2ThemeMenu && level2ThemeMenu.contains(e.target)) ||
                            (modalBox && modalBox.contains(e.target)) ||
-                           (jdictModalBox && jdictModalBox.contains(e.target));
+                           (jdictModalBox && jdictModalBox.contains(e.target)) ||
+                           (jsymModalBox && jsymModalBox.contains(e.target));
     console.log(`[Test Log] [Ext Click] Target: <${e.target.tagName} class="${e.target.className}">, isInsideWidget: ${isInsideWidget}`);
     if (!isInsideWidget) {
       closeSubMenu(triggerBtn, subMenu);
@@ -1105,7 +1165,167 @@ function initJdictDragBehavior(modalBox, headerElem) {
   });
 }
 
+// --- Japanese Symbols Panel Window Functions ---
+
+/**
+ * Positions the Japanese Symbols panel relative to viewport center on first open,
+ * or restores the persisted position from chrome.storage.local (key: mt-jsym-pos).
+ */
+function positionJsymModal(modalBox) {
+  if (!modalBox) return;
+  chrome.storage.local.get("mt-jsym-pos", (data) => {
+    requestAnimationFrame(() => {
+      const boxW = modalBox.offsetWidth  || 320;
+      const boxH = modalBox.offsetHeight || 280;
+      if (data && data["mt-jsym-pos"]) {
+        const pos  = data["mt-jsym-pos"];
+        const left = Math.max(0, Math.min(pos.left, window.innerWidth  - boxW));
+        const top  = Math.max(0, Math.min(pos.top,  window.innerHeight - boxH));
+        modalBox.style.left = left + "px";
+        modalBox.style.top  = top  + "px";
+      } else {
+        modalBox.style.left = Math.max(0, (window.innerWidth  - boxW) / 2) + "px";
+        modalBox.style.top  = Math.max(0, (window.innerHeight - boxH) / 2) + "px";
+      }
+      modalBox.style.right  = "auto";
+      modalBox.style.bottom = "auto";
+    });
+  });
+}
+
+/**
+ * Initializes drag behavior for the Japanese Symbols panel via Pointer Events.
+ * Persists the final position to chrome.storage.local on pointerup.
+ */
+function initJsymDragBehavior(modalBox, headerElem) {
+  if (!modalBox || !headerElem) return;
+  const DRAG_THRESHOLD = 5;
+  let startX, startY, startLeft, startTop;
+  let isPointerDown = false;
+  let isDragging    = false;
+
+  headerElem.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("#mt-jsym-close-btn")) return;
+    if (e.button !== 0) return;
+
+    const rect = modalBox.getBoundingClientRect();
+    startX    = e.clientX;
+    startY    = e.clientY;
+    startLeft = rect.left;
+    startTop  = rect.top;
+
+    modalBox.style.left   = startLeft + "px";
+    modalBox.style.top    = startTop  + "px";
+    modalBox.style.right  = "auto";
+    modalBox.style.bottom = "auto";
+
+    isPointerDown = true;
+    isDragging    = false;
+    headerElem.setPointerCapture(e.pointerId);
+  });
+
+  headerElem.addEventListener("pointermove", (e) => {
+    if (!isPointerDown || !headerElem.hasPointerCapture(e.pointerId)) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!isDragging) {
+      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+        isDragging = true;
+        modalBox.classList.add("mt-dragging");
+      }
+      return;
+    }
+
+    const boxW    = modalBox.offsetWidth;
+    const boxH    = modalBox.offsetHeight;
+    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth  - boxW));
+    const newTop  = Math.max(0, Math.min(startTop  + dy, window.innerHeight - boxH));
+
+    modalBox.style.left = newLeft + "px";
+    modalBox.style.top  = newTop  + "px";
+  });
+
+  const onRelease = () => {
+    if (isDragging) {
+      const left = parseFloat(modalBox.style.left);
+      const top  = parseFloat(modalBox.style.top);
+      if (!isNaN(left) && !isNaN(top)) {
+        chrome.storage.local.set({ "mt-jsym-pos": { left, top } });
+      }
+    }
+    modalBox.classList.remove("mt-dragging");
+    isPointerDown = false;
+    isDragging    = false;
+  };
+
+  headerElem.addEventListener("pointerup",     onRelease);
+  headerElem.addEventListener("pointercancel", onRelease);
+
+  window.addEventListener("resize", () => {
+    if (!modalBox.classList.contains("mt-active")) return;
+    const boxW    = modalBox.offsetWidth;
+    const boxH    = modalBox.offsetHeight;
+    const curLeft = parseFloat(modalBox.style.left) || (window.innerWidth  - boxW) / 2;
+    const curTop  = parseFloat(modalBox.style.top)  || (window.innerHeight - boxH) / 2;
+    const cl = Math.max(0, Math.min(curLeft, window.innerWidth  - boxW));
+    const ct = Math.max(0, Math.min(curTop,  window.innerHeight - boxH));
+    modalBox.style.left = cl + "px";
+    modalBox.style.top  = ct + "px";
+  });
+}
+
+/**
+ * Inserts a symbol at the current cursor position of the focused input element.
+ * Handles both standard <input>/<textarea> and contentEditable (e.g. rich text editors).
+ * Shows a hint in the symbols panel if no text input is currently focused.
+ */
+function insertSymbol(sym) {
+  const el = document.activeElement;
+  const isTextInput = el && (
+    el.tagName === "INPUT" ||
+    el.tagName === "TEXTAREA" ||
+    el.isContentEditable
+  );
+
+  if (!isTextInput) {
+    showJsymHint("请先点击翻译输入框，再点击符号");
+    return;
+  }
+
+  if (el.isContentEditable) {
+    // Rich text / contentEditable — use execCommand for reliable cursor insertion
+    document.execCommand("insertText", false, sym);
+  } else {
+    // Standard input / textarea
+    const start = el.selectionStart ?? el.value.length;
+    const end   = el.selectionEnd   ?? el.value.length;
+    el.value = el.value.slice(0, start) + sym + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = start + sym.length;
+    // Fire both input & change so framework-controlled inputs (React/Vue) react
+    el.dispatchEvent(new Event("input",  { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
+/**
+ * Shows a brief warning hint inside the Japanese Symbols panel header area.
+ * Automatically hides after 2.2 seconds.
+ */
+function showJsymHint(msg) {
+  const hintEl = document.getElementById("mt-jsym-hint");
+  if (!hintEl) return;
+  hintEl.textContent = msg;
+  hintEl.classList.add("mt-jsym-hint-visible");
+  clearTimeout(hintEl._hideTimer);
+  hintEl._hideTimer = setTimeout(() => {
+    hintEl.classList.remove("mt-jsym-hint-visible");
+  }, 2200);
+}
+
 function doJdictSearch() {
+
   const inputElem = document.getElementById("mt-jdict-input");
   const bodyElem = document.getElementById("mt-jdict-body");
   if (!inputElem || !bodyElem) return;
