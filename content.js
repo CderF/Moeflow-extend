@@ -539,6 +539,12 @@ function initFloatingWidget() {
       btn.className = "mt-jsym-sym-btn";
       btn.textContent = sym;
       btn.title = sym;
+      // Critical: prevent the button from stealing focus from the translation input.
+      // mousedown fires before the browser moves focus; preventDefault() stops that
+      // transfer while still allowing the subsequent click event to fire normally.
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+      });
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         insertSymbol(sym);
@@ -546,6 +552,7 @@ function initFloatingWidget() {
       jsymBody.appendChild(btn);
     });
   }
+
 
   // --- Position Initialization ---
   triggerBtn.style.left = (window.innerWidth - 200) + 'px';
