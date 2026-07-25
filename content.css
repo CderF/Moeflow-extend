@@ -402,14 +402,16 @@ html[data-mt-theme="dark"] .mt-icon-dark {
 .mt-sub-menu.mt-direction-down .mt-sub-capsule { transform: translateY(-14px) scale(0.72); }
 
 /* === CLOSING STAGGER (reversed: furthest closes first) === */
-/* Upward: item 1 is furthest from trigger, item 3 is nearest */
+/* Upward: item 1 is furthest from trigger, item 4 is nearest */
 .mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(1) { transition-delay: 0ms; }
 .mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(2) { transition-delay: 35ms; }
 .mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(3) { transition-delay: 70ms; }
-/* Downward: item 3 is furthest, item 1 is nearest */
-.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(3) { transition-delay: 0ms; }
-.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(2) { transition-delay: 35ms; }
-.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(1) { transition-delay: 70ms; }
+.mt-sub-menu.mt-direction-up   .mt-sub-capsule:nth-child(4) { transition-delay: 105ms; }
+/* Downward: item 4 is furthest, item 1 is nearest */
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(4) { transition-delay: 0ms; }
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(3) { transition-delay: 35ms; }
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(2) { transition-delay: 70ms; }
+.mt-sub-menu.mt-direction-down .mt-sub-capsule:nth-child(1) { transition-delay: 105ms; }
 
 /* === OPENED STATE === */
 .mt-sub-menu.mt-open .mt-sub-capsule {
@@ -423,14 +425,16 @@ html[data-mt-theme="dark"] .mt-icon-dark {
 }
 
 /* === OPENING STAGGER (nearest first) === */
-/* Upward: item 3 (bottom) is nearest the trigger → opens first */
-.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(3) { transition-delay: 0ms;   }
-.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(2) { transition-delay: 55ms;  }
-.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(1) { transition-delay: 110ms; }
+/* Upward: item 4 (bottom) is nearest the trigger → opens first */
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(4) { transition-delay: 0ms;   }
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(3) { transition-delay: 55ms;  }
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(2) { transition-delay: 110ms; }
+.mt-sub-menu.mt-open.mt-direction-up   .mt-sub-capsule:nth-child(1) { transition-delay: 165ms; }
 /* Downward: item 1 (top) is nearest the trigger → opens first */
 .mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(1) { transition-delay: 0ms;   }
 .mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(2) { transition-delay: 55ms;  }
 .mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(3) { transition-delay: 110ms; }
+.mt-sub-menu.mt-open.mt-direction-down .mt-sub-capsule:nth-child(4) { transition-delay: 165ms; }
 
 /* Sub-capsule hover & active */
 .mt-sub-capsule:hover {
@@ -1082,4 +1086,147 @@ html[data-mt-theme="dark"] .mt-icon-dark {
 
 
 
+/* ========================================
+   Japanese Symbols Panel (日文符号面板)
+   A compact, draggable symbol-picker window
+   ======================================== */
+
+.mt-jsym-modal {
+  position: fixed;
+  z-index: 99998;
+  width: 324px;
+  background: var(--mt-bg-glass);
+  border: 1px solid var(--mt-border);
+  border-radius: 18px;
+  box-shadow: var(--mt-shadow);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92);
+  transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: var(--mt-sf-font);
+  color: var(--mt-text);
+  user-select: none;
+}
+
+.mt-jsym-modal.mt-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.mt-jsym-modal.mt-dragging {
+  transition: none !important;
+}
+
+/* Header & Drag Handle */
+.mt-jsym-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--mt-border);
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.mt-jsym-header:active {
+  cursor: grabbing;
+}
+
+.mt-jsym-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--mt-text);
+}
+
+.mt-jsym-close {
+  background: transparent;
+  border: none;
+  color: var(--mt-text-sub);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.mt-jsym-close:hover {
+  color: var(--mt-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hint bar (shows "please click translation field first") */
+.mt-jsym-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #ff9500;
+  text-align: center;
+  padding: 0 12px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+  flex-shrink: 0;
+}
+
+.mt-jsym-hint.mt-jsym-hint-visible {
+  max-height: 28px;
+  opacity: 1;
+  padding: 5px 12px;
+}
+
+/* Symbol Grid */
+.mt-jsym-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  padding: 12px;
+  flex-shrink: 0;
+}
+
+/* Individual symbol button */
+.mt-jsym-sym-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 9px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  background: var(--mt-card-bg);
+  border: 1px solid var(--mt-border);
+  color: var(--mt-text);
+  font-family: var(--mt-sf-font), "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  padding: 0;
+  user-select: none;
+}
+
+.mt-jsym-sym-btn:hover {
+  background: var(--mt-card-hover);
+  border-color: var(--mt-sf-blue);
+  transform: scale(1.18);
+  z-index: 1;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+}
+
+.mt-jsym-sym-btn:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
+}
 
