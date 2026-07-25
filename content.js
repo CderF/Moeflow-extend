@@ -20,7 +20,7 @@ function syncAuthToken() {
           if (match) return match[0];
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return null;
   };
 
@@ -58,7 +58,7 @@ function syncAuthToken() {
   if (!userProfile || !userProfile.avatar || !userProfile.name) {
     const avatarImg = document.querySelector('img[src*="avatar"], header img, .avatar img, [class*="avatar"] img');
     const nameElem = document.querySelector('.user-name, .username, header [class*="name"], .user-info span');
-    
+
     if (avatarImg || nameElem) {
       userProfile = {
         name: (userProfile && userProfile.name) ? userProfile.name : (nameElem ? nameElem.innerText.trim() : ""),
@@ -108,7 +108,7 @@ function syncAuthToken() {
                 userProfile.avatar = dataUrl;
               }
             }
-          } catch (e) {}
+          } catch (e) { }
         }
         sendProfileMessage();
       })
@@ -149,7 +149,7 @@ function safeSendMessage(message, callback) {
 function initFloatingWidget() {
   if (document.getElementById("mt-floating-widget-root")) return;
 
-  const iconUrl      = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL ? chrome.runtime.getURL("img/icon.png")       : "";
+  const iconUrl = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL ? chrome.runtime.getURL("img/icon.png") : "";
   const iconWhiteUrl = typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getURL ? chrome.runtime.getURL("img/icon-white.png") : "";
 
   const container = document.createElement("div");
@@ -292,23 +292,23 @@ function initFloatingWidget() {
   document.body.appendChild(container);
 
   const triggerBtn = document.getElementById("mt-floating-trigger-btn");
-  const subMenu    = document.getElementById("mt-sub-menu");
-  const modalBox   = document.getElementById("mt-stat-modal-box");
-  const closeBtn   = document.getElementById("mt-modal-close-btn");
+  const subMenu = document.getElementById("mt-sub-menu");
+  const modalBox = document.getElementById("mt-stat-modal-box");
+  const closeBtn = document.getElementById("mt-modal-close-btn");
   const refreshBtn = document.getElementById("mt-refresh-btn");
-  const copyBtn    = document.getElementById("mt-copy-report-btn");
+  const copyBtn = document.getElementById("mt-copy-report-btn");
 
   // Japanese Dictionary DOM references
-  const jdictModalBox  = document.getElementById("mt-jdict-modal-box");
-  const jdictHeader    = document.getElementById("mt-jdict-header");
-  const jdictCloseBtn  = document.getElementById("mt-jdict-close-btn");
-  const jdictInput     = document.getElementById("mt-jdict-input");
+  const jdictModalBox = document.getElementById("mt-jdict-modal-box");
+  const jdictHeader = document.getElementById("mt-jdict-header");
+  const jdictCloseBtn = document.getElementById("mt-jdict-close-btn");
+  const jdictInput = document.getElementById("mt-jdict-input");
   const jdictSearchBtn = document.getElementById("mt-jdict-search-btn");
-  const jdictTabs      = document.querySelectorAll("#mt-jdict-tabs .mt-jdict-tab");
+  const jdictTabs = document.querySelectorAll("#mt-jdict-tabs .mt-jdict-tab");
 
   // Japanese Symbols Panel DOM references
   const jsymModalBox = document.getElementById("mt-jsym-modal-box");
-  const jsymHeader   = document.getElementById("mt-jsym-header");
+  const jsymHeader = document.getElementById("mt-jsym-header");
   const jsymCloseBtn = document.getElementById("mt-jsym-close-btn");
 
   // --- Level-2 Theme Sub-capsule Manager ---
@@ -528,9 +528,9 @@ function initFloatingWidget() {
 
   // Build symbol buttons dynamically from the symbol list
   const JSYM_LIST = [
-    '♥','♡','♪','☆','★','※','…','「','」','『','』','、',
-    '﹏﹏','‧','︿','﹀','～','|','{','}','《','》',
-    '↑','↓','←','→','?','●','【','】','〰️','„','“','〝','〟'
+    '♥', '♡', '♪', '☆', '★', '※', '…', '「', '」', '『', '』', '、',
+    '﹏﹏', '‧', '︿', '﹀', '～', '|', '{', '}', '《', '》',
+    '↑', '↓', '←', '→', '?', '●', '【', '】', '〰️', '„', '“', '〝', '〟'
   ];
   const jsymBody = document.getElementById("mt-jsym-body");
   if (jsymBody) {
@@ -549,18 +549,18 @@ function initFloatingWidget() {
 
   // --- Position Initialization ---
   triggerBtn.style.left = (window.innerWidth - 200) + 'px';
-  triggerBtn.style.top  = (window.innerHeight - 60) + 'px';
+  triggerBtn.style.top = (window.innerHeight - 60) + 'px';
   chrome.storage.local.get('mt-widget-pos', (data) => {
     requestAnimationFrame(() => {
-      const btnW = triggerBtn.offsetWidth  || 150;
+      const btnW = triggerBtn.offsetWidth || 150;
       const btnH = triggerBtn.offsetHeight || 44;
       if (data && data['mt-widget-pos']) {
         const pos = data['mt-widget-pos'];
-        triggerBtn.style.left = Math.max(0, Math.min(pos.left, window.innerWidth  - btnW)) + 'px';
-        triggerBtn.style.top  = Math.max(0, Math.min(pos.top,  window.innerHeight - btnH)) + 'px';
+        triggerBtn.style.left = Math.max(0, Math.min(pos.left, window.innerWidth - btnW)) + 'px';
+        triggerBtn.style.top = Math.max(0, Math.min(pos.top, window.innerHeight - btnH)) + 'px';
       } else {
-        triggerBtn.style.left = (window.innerWidth  - btnW - 24) + 'px';
-        triggerBtn.style.top  = (window.innerHeight - btnH - 24) + 'px';
+        triggerBtn.style.left = (window.innerWidth - btnW - 24) + 'px';
+        triggerBtn.style.top = (window.innerHeight - btnH - 24) + 'px';
       }
     });
   });
@@ -586,11 +586,11 @@ function initFloatingWidget() {
   // --- Close sub-menu and stats modal when clicking outside (keep dictionary window open) ---
   document.addEventListener("click", (e) => {
     const isInsideWidget = triggerBtn.contains(e.target) ||
-                           subMenu.contains(e.target) ||
-                           (level2ThemeMenu && level2ThemeMenu.contains(e.target)) ||
-                           (modalBox && modalBox.contains(e.target)) ||
-                           (jdictModalBox && jdictModalBox.contains(e.target)) ||
-                           (jsymModalBox && jsymModalBox.contains(e.target));
+      subMenu.contains(e.target) ||
+      (level2ThemeMenu && level2ThemeMenu.contains(e.target)) ||
+      (modalBox && modalBox.contains(e.target)) ||
+      (jdictModalBox && jdictModalBox.contains(e.target)) ||
+      (jsymModalBox && jsymModalBox.contains(e.target));
     console.log(`[Test Log] [Ext Click] Target: <${e.target.tagName} class="${e.target.className}">, isInsideWidget: ${isInsideWidget}`);
     if (!isInsideWidget) {
       closeSubMenu(triggerBtn, subMenu);
@@ -655,18 +655,18 @@ function initFloatingWidget() {
 function initDragBehavior(triggerBtn, subMenu, modalBox) {
   const DRAG_THRESHOLD = 5;
   let startX, startY, startLeft, startTop;
-  let isPointerDown    = false; // true only between pointerdown → pointerup
-  let isDragging       = false;
+  let isPointerDown = false; // true only between pointerdown → pointerup
+  let isDragging = false;
   let dragJustHappened = false;
 
   triggerBtn.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    startX       = e.clientX;
-    startY       = e.clientY;
-    startLeft    = parseFloat(triggerBtn.style.left) || 0;
-    startTop     = parseFloat(triggerBtn.style.top)  || 0;
-    isPointerDown    = true;
-    isDragging       = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = parseFloat(triggerBtn.style.left) || 0;
+    startTop = parseFloat(triggerBtn.style.top) || 0;
+    isPointerDown = true;
+    isDragging = false;
     dragJustHappened = false;
     triggerBtn.setPointerCapture(e.pointerId);
   });
@@ -680,7 +680,7 @@ function initDragBehavior(triggerBtn, subMenu, modalBox) {
 
     if (!isDragging) {
       if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
-        isDragging       = true;
+        isDragging = true;
         dragJustHappened = true;
         triggerBtn.classList.add('mt-dragging');
         closeSubMenu(triggerBtn, subMenu);    // close menu on drag start
@@ -689,38 +689,38 @@ function initDragBehavior(triggerBtn, subMenu, modalBox) {
       return;
     }
 
-    const btnW    = triggerBtn.offsetWidth;
-    const btnH    = triggerBtn.offsetHeight;
-    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth  - btnW));
-    const newTop  = Math.max(0, Math.min(startTop  + dy, window.innerHeight - btnH));
+    const btnW = triggerBtn.offsetWidth;
+    const btnH = triggerBtn.offsetHeight;
+    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth - btnW));
+    const newTop = Math.max(0, Math.min(startTop + dy, window.innerHeight - btnH));
     triggerBtn.style.left = newLeft + 'px';
-    triggerBtn.style.top  = newTop  + 'px';
+    triggerBtn.style.top = newTop + 'px';
   });
 
   const onRelease = () => {
     if (isDragging) {
       const left = parseFloat(triggerBtn.style.left);
-      const top  = parseFloat(triggerBtn.style.top);
+      const top = parseFloat(triggerBtn.style.top);
       chrome.storage.local.set({ 'mt-widget-pos': { left, top } });
     }
     triggerBtn.classList.remove('mt-dragging');
     isPointerDown = false;
-    isDragging    = false;
+    isDragging = false;
   };
 
-  triggerBtn.addEventListener('pointerup',     onRelease);
+  triggerBtn.addEventListener('pointerup', onRelease);
   triggerBtn.addEventListener('pointercancel', onRelease); // handles Escape / focus-loss
 
   // Clamp button within viewport on window resize
   window.addEventListener('resize', () => {
-    const btnW    = triggerBtn.offsetWidth;
-    const btnH    = triggerBtn.offsetHeight;
+    const btnW = triggerBtn.offsetWidth;
+    const btnH = triggerBtn.offsetHeight;
     const curLeft = parseFloat(triggerBtn.style.left) || 0;
-    const curTop  = parseFloat(triggerBtn.style.top)  || 0;
-    const cl = Math.max(0, Math.min(curLeft, window.innerWidth  - btnW));
-    const ct = Math.max(0, Math.min(curTop,  window.innerHeight - btnH));
+    const curTop = parseFloat(triggerBtn.style.top) || 0;
+    const cl = Math.max(0, Math.min(curLeft, window.innerWidth - btnW));
+    const ct = Math.max(0, Math.min(curTop, window.innerHeight - btnH));
     if (cl !== curLeft) triggerBtn.style.left = cl + 'px';
-    if (ct !== curTop)  triggerBtn.style.top  = ct + 'px';
+    if (ct !== curTop) triggerBtn.style.top = ct + 'px';
   });
 
   return {
@@ -751,30 +751,30 @@ function positionModal(triggerBtn, modalBox) {
   const GAP = 8;
 
   // Horizontal alignment
-  const btnCenterX  = btnRect.left + btnRect.width / 2;
+  const btnCenterX = btnRect.left + btnRect.width / 2;
   const isRightHalf = btnCenterX > window.innerWidth / 2;
 
   if (isRightHalf) {
-    modalBox.style.left  = 'auto';
+    modalBox.style.left = 'auto';
     modalBox.style.right = (window.innerWidth - btnRect.right) + 'px';
   } else {
     modalBox.style.right = 'auto';
-    modalBox.style.left  = btnRect.left + 'px';
+    modalBox.style.left = btnRect.left + 'px';
   }
 
   // Vertical alignment
-  const modalEstH  = Math.min(520, window.innerHeight - 48);
+  const modalEstH = Math.min(520, window.innerHeight - 48);
   const spaceAbove = btnRect.top;
-  const originX    = isRightHalf ? 'right' : 'left';
+  const originX = isRightHalf ? 'right' : 'left';
 
   if (spaceAbove >= modalEstH + GAP) {
     // Enough room above → place above
     modalBox.style.bottom = (window.innerHeight - btnRect.top + GAP) + 'px';
-    modalBox.style.top    = 'auto';
+    modalBox.style.top = 'auto';
     modalBox.style.transformOrigin = `${originX} bottom`;
   } else {
     // Fall back to below
-    modalBox.style.top    = (btnRect.bottom + GAP) + 'px';
+    modalBox.style.top = (btnRect.bottom + GAP) + 'px';
     modalBox.style.bottom = 'auto';
     modalBox.style.transformOrigin = `${originX} top`;
   }
@@ -833,7 +833,7 @@ function closeSubMenu(triggerBtn, subMenu) {
  * @returns {'up' | 'down'}
  */
 function getSubMenuDirection(triggerBtn) {
-  const btnRect  = triggerBtn.getBoundingClientRect();
+  const btnRect = triggerBtn.getBoundingClientRect();
   const btnCenterY = btnRect.top + btnRect.height / 2;
   return btnCenterY > window.innerHeight / 2 ? 'up' : 'down';
 }
@@ -848,29 +848,29 @@ function getSubMenuDirection(triggerBtn) {
  * @param {'up'|'down'} direction
  */
 function positionSubMenu(triggerBtn, subMenu, direction) {
-  const btnRect  = triggerBtn.getBoundingClientRect();
-  const GAP  = 8;
+  const btnRect = triggerBtn.getBoundingClientRect();
+  const GAP = 8;
   const EDGE = 2;
 
   // Vertical
   if (direction === 'up') {
     subMenu.style.bottom = (window.innerHeight - btnRect.top + GAP) + 'px';
-    subMenu.style.top    = 'auto';
+    subMenu.style.top = 'auto';
   } else {
-    subMenu.style.top    = (btnRect.bottom + GAP) + 'px';
+    subMenu.style.top = (btnRect.bottom + GAP) + 'px';
     subMenu.style.bottom = 'auto';
   }
 
   // Horizontal (same anchor logic as positionModal)
-  const btnCenterX  = btnRect.left + btnRect.width / 2;
+  const btnCenterX = btnRect.left + btnRect.width / 2;
   const isRightHalf = btnCenterX > window.innerWidth / 2;
 
   if (isRightHalf) {
     const rightDist = window.innerWidth - btnRect.right;
     subMenu.style.right = Math.max(EDGE, rightDist) + 'px';
-    subMenu.style.left  = 'auto';
+    subMenu.style.left = 'auto';
   } else {
-    subMenu.style.left  = Math.max(EDGE, btnRect.left) + 'px';
+    subMenu.style.left = Math.max(EDGE, btnRect.left) + 'px';
     subMenu.style.right = 'auto';
   }
 }
@@ -1052,14 +1052,14 @@ function generateSingleProjectReportText(projStats, userProfile) {
   const statusStr = projStats.isFinished ? "🏁 已完成" : "🟢 进行中";
 
   return `【🌱 种植园汉化组 - 当前项目简报${nameStr}】\n` +
-         `------------------------------\n` +
-         `📌 项目全称：${projStats.fullTitle}\n` +
-         `🏷️ 项目状态：${statusStr}${projStats.isPlantation ? ' | 🌱 种植园项目' : ''}\n` +
-         `📊 句子总数：${projStats.sourceCount} 句\n` +
-         `📝 翻译进度：${projStats.translatedCount} / ${projStats.sourceCount} (${projStats.translationProgress}%)\n` +
-         `🔍 校对进度：${projStats.checkedCount} / ${projStats.sourceCount} (${projStats.proofreadProgress}%)\n` +
-         `------------------------------\n` +
-         `发送自：种植园尨译助手 🚀`;
+    `------------------------------\n` +
+    `📌 项目全称：${projStats.fullTitle}\n` +
+    `🏷️ 项目状态：${statusStr}${projStats.isPlantation ? ' | 🌱 种植园项目' : ''}\n` +
+    `📊 句子总数：${projStats.sourceCount} 句\n` +
+    `📝 翻译进度：${projStats.translatedCount} / ${projStats.sourceCount} (${projStats.translationProgress}%)\n` +
+    `🔍 校对进度：${projStats.checkedCount} / ${projStats.sourceCount} (${projStats.proofreadProgress}%)\n` +
+    `------------------------------\n` +
+    `发送自：种植园尨译助手 🚀`;
 }
 
 
@@ -1175,19 +1175,19 @@ function positionJsymModal(modalBox) {
   if (!modalBox) return;
   chrome.storage.local.get("mt-jsym-pos", (data) => {
     requestAnimationFrame(() => {
-      const boxW = modalBox.offsetWidth  || 320;
+      const boxW = modalBox.offsetWidth || 320;
       const boxH = modalBox.offsetHeight || 280;
       if (data && data["mt-jsym-pos"]) {
-        const pos  = data["mt-jsym-pos"];
-        const left = Math.max(0, Math.min(pos.left, window.innerWidth  - boxW));
-        const top  = Math.max(0, Math.min(pos.top,  window.innerHeight - boxH));
+        const pos = data["mt-jsym-pos"];
+        const left = Math.max(0, Math.min(pos.left, window.innerWidth - boxW));
+        const top = Math.max(0, Math.min(pos.top, window.innerHeight - boxH));
         modalBox.style.left = left + "px";
-        modalBox.style.top  = top  + "px";
+        modalBox.style.top = top + "px";
       } else {
-        modalBox.style.left = Math.max(0, (window.innerWidth  - boxW) / 2) + "px";
-        modalBox.style.top  = Math.max(0, (window.innerHeight - boxH) / 2) + "px";
+        modalBox.style.left = Math.max(0, (window.innerWidth - boxW) / 2) + "px";
+        modalBox.style.top = Math.max(0, (window.innerHeight - boxH) / 2) + "px";
       }
-      modalBox.style.right  = "auto";
+      modalBox.style.right = "auto";
       modalBox.style.bottom = "auto";
     });
   });
@@ -1202,25 +1202,25 @@ function initJsymDragBehavior(modalBox, headerElem) {
   const DRAG_THRESHOLD = 5;
   let startX, startY, startLeft, startTop;
   let isPointerDown = false;
-  let isDragging    = false;
+  let isDragging = false;
 
   headerElem.addEventListener("pointerdown", (e) => {
     if (e.target.closest("#mt-jsym-close-btn")) return;
     if (e.button !== 0) return;
 
     const rect = modalBox.getBoundingClientRect();
-    startX    = e.clientX;
-    startY    = e.clientY;
+    startX = e.clientX;
+    startY = e.clientY;
     startLeft = rect.left;
-    startTop  = rect.top;
+    startTop = rect.top;
 
-    modalBox.style.left   = startLeft + "px";
-    modalBox.style.top    = startTop  + "px";
-    modalBox.style.right  = "auto";
+    modalBox.style.left = startLeft + "px";
+    modalBox.style.top = startTop + "px";
+    modalBox.style.right = "auto";
     modalBox.style.bottom = "auto";
 
     isPointerDown = true;
-    isDragging    = false;
+    isDragging = false;
     headerElem.setPointerCapture(e.pointerId);
   });
 
@@ -1238,41 +1238,41 @@ function initJsymDragBehavior(modalBox, headerElem) {
       return;
     }
 
-    const boxW    = modalBox.offsetWidth;
-    const boxH    = modalBox.offsetHeight;
-    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth  - boxW));
-    const newTop  = Math.max(0, Math.min(startTop  + dy, window.innerHeight - boxH));
+    const boxW = modalBox.offsetWidth;
+    const boxH = modalBox.offsetHeight;
+    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth - boxW));
+    const newTop = Math.max(0, Math.min(startTop + dy, window.innerHeight - boxH));
 
     modalBox.style.left = newLeft + "px";
-    modalBox.style.top  = newTop  + "px";
+    modalBox.style.top = newTop + "px";
   });
 
   const onRelease = () => {
     if (isDragging) {
       const left = parseFloat(modalBox.style.left);
-      const top  = parseFloat(modalBox.style.top);
+      const top = parseFloat(modalBox.style.top);
       if (!isNaN(left) && !isNaN(top)) {
         chrome.storage.local.set({ "mt-jsym-pos": { left, top } });
       }
     }
     modalBox.classList.remove("mt-dragging");
     isPointerDown = false;
-    isDragging    = false;
+    isDragging = false;
   };
 
-  headerElem.addEventListener("pointerup",     onRelease);
+  headerElem.addEventListener("pointerup", onRelease);
   headerElem.addEventListener("pointercancel", onRelease);
 
   window.addEventListener("resize", () => {
     if (!modalBox.classList.contains("mt-active")) return;
-    const boxW    = modalBox.offsetWidth;
-    const boxH    = modalBox.offsetHeight;
-    const curLeft = parseFloat(modalBox.style.left) || (window.innerWidth  - boxW) / 2;
-    const curTop  = parseFloat(modalBox.style.top)  || (window.innerHeight - boxH) / 2;
-    const cl = Math.max(0, Math.min(curLeft, window.innerWidth  - boxW));
-    const ct = Math.max(0, Math.min(curTop,  window.innerHeight - boxH));
+    const boxW = modalBox.offsetWidth;
+    const boxH = modalBox.offsetHeight;
+    const curLeft = parseFloat(modalBox.style.left) || (window.innerWidth - boxW) / 2;
+    const curTop = parseFloat(modalBox.style.top) || (window.innerHeight - boxH) / 2;
+    const cl = Math.max(0, Math.min(curLeft, window.innerWidth - boxW));
+    const ct = Math.max(0, Math.min(curTop, window.innerHeight - boxH));
     modalBox.style.left = cl + "px";
-    modalBox.style.top  = ct + "px";
+    modalBox.style.top = ct + "px";
   });
 }
 
@@ -1300,11 +1300,11 @@ function insertSymbol(sym) {
   } else {
     // Standard input / textarea
     const start = el.selectionStart ?? el.value.length;
-    const end   = el.selectionEnd   ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
     el.value = el.value.slice(0, start) + sym + el.value.slice(end);
     el.selectionStart = el.selectionEnd = start + sym.length;
     // Fire both input & change so framework-controlled inputs (React/Vue) react
-    el.dispatchEvent(new Event("input",  { bubbles: true }));
+    el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
 }
@@ -1467,9 +1467,9 @@ function parseAndRenderWeblio(html, dictType, query, targetUrl) {
 
     const bodyText = doc.body ? doc.body.textContent : "";
     const isNotFound = bodyText.includes("一致する見出し語は見つかりませんでした") ||
-                       bodyText.includes("該当する項目は見つかりませんでした") ||
-                       bodyText.includes("404 Not Found") ||
-                       (!doc.querySelector(".kiji") && !doc.querySelector(".tit-Midashi") && !doc.querySelector("#main"));
+      bodyText.includes("該当する項目は見つかりませんでした") ||
+      bodyText.includes("404 Not Found") ||
+      (!doc.querySelector(".kiji") && !doc.querySelector(".tit-Midashi") && !doc.querySelector("#main"));
 
     if (isNotFound) {
       bodyElem.innerHTML = `
