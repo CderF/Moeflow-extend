@@ -17,9 +17,12 @@
 | ![Popup 弹窗界面](img/screenshots/popup.png) | ![悬浮挂件界面](img/screenshots/widget.gif) |
 | *全量统计、20项目列表与分步诊断* | *展开功能菜单与主题选单* |
 
-| 内置日语辞書 (MOJi + Weblio) | 单项目实时统计与工作简报 |
+| 内置日语辞書 (MOJi + Weblio) |
 | :---: | :---: |
-| ![日语辞書界面](img/screenshots/dictionary.png) | ![单项目统计界面（无项目）](img/screenshots/project_stats1.png) | ![单项目统计界面（有项目）] (img/screenshots/project_stats2.png) |
+| ![日语辞書界面](img/screenshots/dictionary.png) | 
+| :---: | :---: |
+| 单项目实时统计与工作简报 |
+|![单项目统计界面（无项目）](img/screenshots/project_stats1.png) | ![单项目统计界面（有项目）] (img/screenshots/project_stats2.png) |
 | *假名发音例句与权威日日释义* | *自动感知当前项目与一键简报* |
 
 <details>
