@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform: Chrome](https://img.shields.io/badge/Platform-Chrome%20%2F%20Edge-orange.svg)](https://www.google.com/chrome/)
 
-**种植园尨译助手** 是一款专为 [Moetran (尨译)](https://moetran.com) 翻译平台成员（尤其是种植园汉化组成员）打造的高颜值、自动化浏览器扩展（Chrome Manifest V3）。
+**种植园尨译助手** 是一款专为 [Moetran (尨译)](https://moetran.com) 翻译平台成员（尤其是种植园汉化组成员）打造的自动化浏览器扩展（Chrome Manifest V3）。
 
 它能够自动感知登录状态、精准抓取翻译与校对进度，并集成了 **内置日语辞書（MOJi + Weblio）**、**防闪烁主题切换 (Anti-FOUC)**、**灵动岛悬浮挂件** 以及 **一键工作简报生成** 功能。
 
