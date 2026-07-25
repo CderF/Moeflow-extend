@@ -1,4 +1,4 @@
-# 🌱 种植园尨译助手 (Zhongzhiyuan Moetran Helper)
+# <img src="img/cotton.png" width="32" height="32" valign="middle" alt="cotton"> 种植园尨译助手 (Zhongzhiyuan Moetran Helper)
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -10,34 +10,34 @@
 
 ---
 
-## ✨ 核心特性 (Features)
+## ✦ 核心特性 (Features)
 
-- 📊 **全维工作数据统计**
+- ❖ **全维工作数据统计**
   - **全量项目统计**：自动迭代 API 多页数据，精确统计您历史参与的所有项目总数及种植园项目数。
   - **最近 20 项目精细监控**：句数统计（翻译 / 校对句数）、完成率及状态分布基于最近 20 个项目展示。
   - **当前项目实时感知**：在网页具体项目区，悬浮挂件自动读取当前项目的实时进度，并支持生成专属项目简报。
   - **双 100% 完成规则**：仅在翻译进度与校对进度**同时达到 100%** 时判定为已完成 (Finished)。
 
-- 📖 **内置日语辞書助手 (MOJi + Weblio)**
+- ❖ **内置日语辞書助手 (MOJi + Weblio)**
   - **MOJi 辞書 (日中/中日)**：自动检索假名、发音、声调、详细中文释义及精选双语例句。
   - **Weblio 国語 (日日)**：原生解析 Weblio 词条内容，提供权威日日释义与直接跳转入口。
   - **可拖拽独立窗口**：支持在网页内任意拖拽词典窗口，自动记忆上次停留位置 (`mt-jdict-pos`)。
 
-- 🌓 **防闪烁主题与极简 UI**
+- ❖ **防闪烁主题与极简 UI**
   - **三档主题控制**：支持 **跟随系统 (System)**、**强制深色 (Dark)** 和 **强制浅色 (Light)**。
   - **Anti-FOUC 预加载**：在 `document_start` 阶段给 `<html>` 设置 `data-mt-theme` 属性，彻底消除刷屏闪烁。
   - **灵动岛悬浮挂件**：嵌入 `moetran.com` 网页，具备 Pointer Events 拖拽吸附、边缘裁剪防溢出与平滑二级选单。
 
-- 📋 **高效汇报与网络优化**
+- ❖ **高效汇报与网络优化**
   - **一键工作简报**：自动生成符合团队规范的 Markdown 简报（全量统计/当前项目统计）并写入剪贴板。
   - **头像防盗链修正**：基于 MV3 `declarativeNetRequest` 自动修饰 Header，解决 `m-t.pics` 图片 403 跨域问题。
 
 ---
 
-## 📷 界面展示 (Screenshots)
+## ✦ 界面展示 (Screenshots)
 
 <details open>
-<summary><b>📱 扩展 Popup 弹窗与灵动岛悬浮胶囊</b></summary>
+<summary><b>▸ 扩展 Popup 弹窗与灵动岛悬浮胶囊</b></summary>
 <br>
 
 | Popup 扩展弹窗仪表盘 | 灵动岛悬浮胶囊挂件 |
@@ -48,18 +48,29 @@
 </details>
 
 <details open>
-<summary><b>📖 内置日语辞書与当前项目统计 Modal</b></summary>
+<summary><b>▸ 内置日语辞書 (MOJi + Weblio)</b></summary>
 <br>
 
-| 内置日语辞書 (MOJi + Weblio) | 当前项目实时统计 |
+| 日语辞書窗口 (MOJi 日中 / Weblio 日日) |
+| :---: |
+| ![日语辞書界面](img/screenshots/dictionary.png) |
+| *假名、发音、例句与权威日日释义* |
+
+</details>
+
+<details open>
+<summary><b>▸ 当前项目实时统计 Modal (未打开项目 / 已打开项目)</b></summary>
+<br>
+
+| 未打开项目时 (默认提示) | 已打开项目时 (句数/进度/简报) |
 | :---: | :---: |
-| ![日语辞書界面](img/screenshots/dictionary.png) | ![单项目统计界面](img/screenshots/project_stats2.png) |
-| *假名、发音、例句与权威日日释义* | *当前项目实时句数、进度与专属简报* |
+| ![未打开项目状态](img/screenshots/project_stats1.png) | ![已打开项目状态](img/screenshots/project_stats2.png) |
+| *智能提示前往项目列表* | *实时计算句数、完成度与专属简报* |
 
 </details>
 
 <details>
-<summary><b>🌓 主题模式对比 (深色 / 浅色)</b></summary>
+<summary><b>▸ 主题模式对比 (深色 / 浅色)</b></summary>
 <br>
 
 | 强制深色模式 (Dark) | 强制浅色模式 (Light) |
@@ -70,7 +81,7 @@
 
 ---
 
-## 🚀 快速开始 (Quick Start)
+## ✦ 快速开始 (Quick Start)
 
 1. **下载源码**：
    ```bash
@@ -85,7 +96,7 @@
 
 ---
 
-## 📁 目录结构
+## ✦ 目录结构
 
 ```text
 Moeflow-extend/
@@ -114,7 +125,7 @@ Moeflow-extend/
 
 ---
 
-## 🔧 技术细节与 API (Technical Specifications)
+## ✦ 技术细节与 API (Technical Specifications)
 
 - **Manifest**: Chrome Extension Manifest V3 (`"type": "module"`)
 - **API 交互接口**:
@@ -130,6 +141,6 @@ Moeflow-extend/
 
 ---
 
-## 📄 开源许可证
+## ✦ 开源许可证
 
 本项目采用 [MIT License](LICENSE) 许可证。
