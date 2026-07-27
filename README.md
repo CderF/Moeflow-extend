@@ -59,6 +59,17 @@
 </details>
 
 <details open>
+<summary><b>▸ 日文符号自动键入</b></summary>
+<br>
+
+| 日语输入时 (键入 Japanese Punctuation) |
+| :---: |
+| ![日语输入界面](img/screenshots/Symbol.gif) |
+| *键入 /键入・ 自动转换为「」「」、；/；、：/：、* |
+
+</details>
+
+<details open>
 <summary><b>▸ 当前项目实时统计 Modal (未打开项目 / 已打开项目)</b></summary>
 <br>
 
