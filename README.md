@@ -3,10 +3,11 @@
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform: Chrome](https://img.shields.io/badge/Platform-Chrome%20%2F%20Edge-orange.svg)](https://www.google.com/chrome/)
+[![Privacy Policy](https://img.shields.io/badge/Privacy-Policy-purple.svg)](Privacy%20Policy.md)
 
-**种植园尨译助手** 是一款专为 [Moetran (尨译)](https://moetran.com) 翻译平台成员（尤其是种植园汉化组成员）打造的自动化浏览器扩展（Chrome Manifest V3）。
+**种植园尨译助手** 是一款专为 [Moetran (尨译)](https://moetran.com) 翻译平台成员（尤其是种植园汉化组成员）打造的高颜值、自动化浏览器扩展（Chrome Manifest V3）。
 
-它能够自动感知登录状态、精准抓取翻译与校对进度，并集成了 **内置日语辞書（MOJi + Weblio）**、**防闪烁主题切换 (Anti-FOUC)**、**灵动岛悬浮挂件** 以及 **一键工作简报生成** 功能。
+它能够自动感知登录状态、精准抓取翻译与校对进度，并集成了 **内置日语辞書（MOJi + Weblio）**、**日文常用符号快捷输入面板**、**防闪烁主题切换 (Anti-FOUC)**、**灵动岛悬浮挂件** 以及 **一键工作简报生成** 功能。
 
 ---
 
@@ -18,10 +19,11 @@
   - **当前项目实时感知**：在网页具体项目区，悬浮挂件自动读取当前项目的实时进度，并支持生成专属项目简报。
   - **双 100% 完成规则**：仅在翻译进度与校对进度**同时达到 100%** 时判定为已完成 (Finished)。
 
-- ❖ **内置日语辞書助手 (MOJi + Weblio)**
-  - **MOJi 辞書 (日中/中日)**：自动检索假名、发音、声调、详细中文释义及精选双语例句。
+- ❖ **内置日语辞書与符号工具**
+  - **MOJi 辞書 (日中/中日)**：查词自动获取假名、发音、声调、详细中文释义及精选双语例句。
   - **Weblio 国語 (日日)**：原生解析 Weblio 词条内容，提供权威日日释义与直接跳转入口。
-  - **可拖拽独立窗口**：支持在网页内任意拖拽词典窗口，自动记忆上次停留位置 (`mt-jdict-pos`)。
+  - **日文符号快捷面板 (`mt-action-jsym`)**：预置日文括号（`「」` `『』` `【】`）、标点（`・` `…` `〜`）与特殊标记，点击自动在当前输入框光标处插入符号并保持选区与焦点（兼容 React / Vue 数据绑定模型）。
+  - **可拖拽独立窗口**：词典与符号面板均可拖拽并自动记忆持久化位置 (`mt-jdict-pos` / `mt-jsym-pos`)。
 
 - ❖ **防闪烁主题与极简 UI**
   - **三档主题控制**：支持 **跟随系统 (System)**、**强制深色 (Dark)** 和 **强制浅色 (Light)**。
@@ -59,13 +61,13 @@
 </details>
 
 <details open>
-<summary><b>▸ 日文符号自动键入</b></summary>
+<summary><b>▸ 日文常用符号快捷输入面板</b></summary>
 <br>
 
-| 日语输入时 (键入 Japanese Punctuation) |
+| 符号面板快捷插入 (Japanese Symbols Panel) |
 | :---: |
-| ![日语输入界面](img/screenshots/Symbol.gif) |
-| *键入 /键入・ 自动转换为「」「」、；/；、：/：、* |
+| ![日语符号快捷键入](img/screenshots/Symbol.gif) |
+| *点击面板符号自动向当前输入框光标处插入，保持选区与焦点* |
 
 </details>
 
@@ -113,8 +115,8 @@
 Moeflow-extend/
 ├── manifest.json             # Chrome Extension Manifest V3 配置文件
 ├── background.js             # Service Worker 后台服务 (统计刷新、API 中转与字典请求)
-├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、单项目统计与 Token 捕获)
-├── content.css               # 悬浮挂件、词典窗口与 Modal 样式 (iOS Dynamic Island 风格)
+├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、符号面板、单项目统计)
+├── content.css               # 悬浮挂件、词典窗口、符号面板与 Modal 样式 (iOS Dynamic Island 风格)
 ├── popup.html                # 扩展 Popup 视图 HTML
 ├── popup.js                  # 扩展 Popup 逻辑 (数据渲染与诊断测试)
 ├── popup.css                 # 扩展 Popup 样式 (Apple SF 风格 Design Tokens)
@@ -122,6 +124,7 @@ Moeflow-extend/
 ├── popup-theme-preloader.js  # Popup 防闪烁主题预加载脚本
 ├── moetran-theme.css         # Moetran 网页端定制主题样式表
 ├── rules.json                # declarativeNetRequest 头像 Referer 修改规则
+├── Privacy Policy.md         # 扩展隐私政策文档
 ├── utils/
 │   └── moetranApi.js         # REST API 服务模块 (Token 提取、多页分页与统计计算引擎)
 ├── img/
@@ -152,6 +155,7 @@ Moeflow-extend/
 
 ---
 
-## ✦ 开源许可证
+## ✦ 隐私与开源许可证 (Privacy & License)
 
-本项目采用 [MIT License](LICENSE) 许可证。
+- **隐私政策**：详见 [Privacy Policy.md](Privacy%20Policy.md)。扩展仅在本地读取必须的登录凭证与统计接口，保护用户个人数据安全。
+- **开源许可证**：本项目采用 [MIT License](LICENSE) 许可证。

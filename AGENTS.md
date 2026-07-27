@@ -6,14 +6,14 @@
 
 ## 1. 🏗️ 项目架构与组件划分
 
-本项目是一个基于 **Chrome Extension Manifest V3** 标准构建的跨浏览器插件，主要处理与 `https://moetran.com` (尨译平台) 的认证、数据同步、内置辞書工具、防闪烁主题切换与 UI 呈现。
+本项目是一个基于 **Chrome Extension Manifest V3** 标准构建的跨浏览器插件，主要处理与 `https://moetran.com` (尨译平台) 的认证、数据同步、内置辞書工具、日文符号快捷输入面板、防闪烁主题切换与 UI 呈现。
 
 ```text
 Moeflow-extend/
 ├── manifest.json             # MV3 声明文件 (Service Worker 指定 "type": "module")
 ├── background.js             # Service Worker 后台线程 (定时同步、消息中转、辞書请求与挂件自动注入)
-├── content.js                # 网页 Content Script (JWT 捕获、灵动岛悬浮挂件、当前项目统计与日语辞書 Modal)
-├── content.css               # 嵌入挂件、辞書窗口与 Modal 样式 (iOS Dynamic Island 胶囊风格)
+├── content.js                # 网页 Content Script (JWT 捕获、悬浮胶囊挂件、辞書 Modal、日文符号面板与单项目统计)
+├── content.css               # 嵌入挂件、辞書窗口、日文符号面板与 Modal 样式 (iOS Dynamic Island 胶囊风格)
 ├── popup.html                # 扩展弹窗 HTML 视图 (包含诊断测试面板)
 ├── popup.js                  # 弹窗交互逻辑 (数据渲染、一键简报生成、分步断言测试)
 ├── popup.css                 # 弹窗样式 (Apple SF Pro 设计系统 & Design Tokens)
@@ -21,6 +21,7 @@ Moeflow-extend/
 ├── popup-theme-preloader.js  # Popup 防闪烁主题预加载脚本
 ├── moetran-theme.css         # Moetran 网页端定制主题样式表
 ├── rules.json                # declarativeNetRequest 头像 Referer 修改规则
+├── Privacy Policy.md         # 扩展隐私政策声明文档 (Privacy Policy)
 ├── utils/
 │   └── moetranApi.js         # API 服务模块 (Token 提取、接口请求、多页分页与统计计算引擎)
 ├── img/
@@ -84,10 +85,9 @@ Moeflow-extend/
 
 ---
 
-## 4. 📖 日语辞書引擎 (MOJi + Weblio)
+## 4. 📖 日语辞書与符号工具引擎
 
-位于 `background.js` 与 `content.js` 中的日语辞書助手实现机制：
-
+### 日语辞書助手 (MOJi + Weblio)
 1. **MOJi 辞書 (日中 / 中日)**：
    - 接口 1: `GET https://api.mojidict.com/app/mojidict/api/v2/search/all?text={query}&types=102` (检索词条列表)
    - 接口 2: `GET https://api.mojidict.com/app/mojidict/api/v1/word/detailInfo?wordId={targetId}` (获取假名、发音、声调、中文释义与双语例句)
@@ -96,6 +96,14 @@ Moeflow-extend/
    - `content.js` 使用 `DOMParser` 解析 HTML 节点 `.kiji` / `#main`，清洗广告与无用元素，重写相对路径 `<a>` 标签为新窗口跳转。
 3. **窗口拖拽与记忆**：
    - 词典窗口可通过 Header 拖拽，位置持久化至 `chrome.storage.local` (`mt-jdict-pos`)。
+
+### 日文常用符号快捷输入面板 (`mt-action-jsym`)
+1. **输入框焦点感知与光标插入 (`insertSymbol`)**：
+   - 监听点击符号按钮事件，判断当前焦点元素 `document.activeElement` 是否为 `<input>`、`<textarea>` 或 `contentEditable` 富文本。
+   - 自动在当前选区/光标处插入目标符号，并触发 `input` 与 `change` 事件（兼容 React / Vue 数据绑定模型）。
+   - 若未聚焦任何文本输入框，显示 `showJsymHint` 极简防呆提示。
+2. **独立拖拽与记忆**：
+   - 符号面板 Header 支持 Pointer Events 拖拽，位置持久化存至 `chrome.storage.local` (`mt-jsym-pos`)。
 
 ---
 
