@@ -305,72 +305,47 @@ async function fetchMojiDict(query) {
 }
 
 /**
- * Fetch entry summary & search results from 萌娘百科 (Moegirl Wiki) MediaWiki API
+ * Fetch entry summary & OGP from 萌娘百科 (Moegirl Wiki)
  */
 async function fetchMoegirlWiki(query) {
   const targetUrl = `https://zh.moegirl.org.cn/index.php?search=${encodeURIComponent(query)}`;
   const headers = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*"
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"
   };
 
   try {
-    const searchApi = `https://zh.moegirl.org.cn/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1`;
-    const searchRes = await fetch(searchApi, { headers });
-
-    if (!searchRes.ok) {
-      return { success: false, error: `萌娘百科 API 响应异常 (HTTP ${searchRes.status})`, targetUrl, source: "moegirl" };
+    const res = await fetch(targetUrl, { headers });
+    if (!res.ok) {
+      return { success: false, error: `萌娘百科请求失败 (HTTP ${res.status})`, targetUrl, source: "moegirl" };
     }
 
-    const searchData = await searchRes.json();
-    const searchList = searchData.query && searchData.query.search ? searchData.query.search : [];
+    const finalUrl = res.url || targetUrl;
+    const htmlText = await res.text();
 
-    if (searchList.length === 0) {
-      return { success: true, source: "moegirl", query, targetUrl, results: [] };
-    }
+    // Extract title from <h1 id="firstHeading"> or <title>
+    const titleMatch = htmlText.match(/<h1[^>]*id=["']firstHeading["'][^>]*>([\s\S]*?)<\/h1>/i) || htmlText.match(/<title>([\s\S]*?)<\/title>/i);
+    let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : query;
+    title = title.replace(/ - 萌娘百科.*$/, "").trim();
 
-    const topItem = searchList[0];
-    const pageTitle = topItem.title;
-    const pageTargetUrl = `https://zh.moegirl.org.cn/${encodeURIComponent(pageTitle)}`;
+    // Extract OGP description or meta description
+    const descMatch = htmlText.match(/<meta\s+(?:property|name)=["'](?:og:description|description)["']\s+content=["']([^"']+)["']/i);
+    let extractText = descMatch ? descMatch[1].trim() : "";
 
-    // Fetch extract and thumbnail for top search result
-    let extractText = "";
-    let thumbnailUrl = "";
-    try {
-      const detailApi = `https://zh.moegirl.org.cn/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&piprop=original&titles=${encodeURIComponent(pageTitle)}&format=json&utf8=1`;
-      const detailRes = await fetch(detailApi, { headers });
-      if (detailRes.ok) {
-        const detailData = await detailRes.json();
-        if (detailData.query && detailData.query.pages) {
-          const pages = detailData.query.pages;
-          const pageObj = Object.values(pages)[0];
-          if (pageObj) {
-            extractText = pageObj.extract || "";
-            if (pageObj.original && pageObj.original.source) {
-              thumbnailUrl = pageObj.original.source;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("[Background] Moegirl detail fetch sub-error:", e);
-    }
-
-    const formattedList = searchList.slice(0, 5).map(item => ({
-      title: item.title,
-      snippet: item.snippet ? item.snippet.replace(/<[^>]+>/g, "") : "",
-      url: `https://zh.moegirl.org.cn/${encodeURIComponent(item.title)}`
-    }));
+    // Extract OGP image
+    const imgMatch = htmlText.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i);
+    let thumbnailUrl = imgMatch ? imgMatch[1].trim() : "";
 
     return {
       success: true,
       source: "moegirl",
       query,
-      targetUrl: pageTargetUrl,
-      title: pageTitle,
-      extract: extractText || topItem.snippet ? topItem.snippet.replace(/<[^>]+>/g, "") : "",
+      targetUrl: finalUrl,
+      title: title || query,
+      extract: extractText,
       thumbnail: thumbnailUrl,
-      results: formattedList
+      results: [{ title: title || query, url: finalUrl }]
     };
   } catch (err) {
     console.error("[Background] Moegirl search error:", err);
@@ -379,10 +354,10 @@ async function fetchMoegirlWiki(query) {
 }
 
 /**
- * Fetch article HTML from ピクシブ百科事典 (Pixiv Dic)
+ * Fetch article HTML & OGP from ピクシブ百科事典 (Pixiv Dic)
  */
 async function fetchPixivDic(query) {
-  const targetUrl = `https://dic.pixiv.net/a/${encodeURIComponent(query)}`;
+  const directUrl = `https://dic.pixiv.net/a/${encodeURIComponent(query)}`;
   const searchUrl = `https://dic.pixiv.net/search?query=${encodeURIComponent(query)}`;
   const headers = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -391,23 +366,32 @@ async function fetchPixivDic(query) {
   };
 
   try {
-    let res = await fetch(targetUrl, { headers });
-    let isDirectPage = res.ok;
-    let finalUrl = targetUrl;
-    let htmlText = "";
+    let res = await fetch(directUrl, { headers });
+    let finalUrl = directUrl;
 
-    if (isDirectPage) {
-      htmlText = await res.text();
-    } else {
-      // Try search endpoint
+    if (!res.ok) {
       finalUrl = searchUrl;
       res = await fetch(searchUrl, { headers });
-      if (res.ok) {
-        htmlText = await res.text();
-      } else {
-        return { success: false, error: `Pixiv百科 请求失败 (HTTP ${res.status})`, targetUrl: searchUrl, source: "pixiv" };
-      }
     }
+
+    if (!res.ok) {
+      return { success: false, error: `Pixiv百科 请求失败 (HTTP ${res.status})`, targetUrl: searchUrl, source: "pixiv" };
+    }
+
+    const htmlText = await res.text();
+    finalUrl = res.url || finalUrl;
+
+    // Extract OGP title
+    const titleMatch = htmlText.match(/<meta\s+(?:property|name)=["']og:title["']\s+content=["']([^"']+)["']/i) || htmlText.match(/<title>([\s\S]*?)<\/title>/i);
+    let title = titleMatch ? titleMatch[1].replace(/ - 【ピクシブ百科事典】.*$/, "").trim() : query;
+
+    // Extract OGP description
+    const descMatch = htmlText.match(/<meta\s+(?:property|name)=["'](?:og:description|description)["']\s+content=["']([^"']+)["']/i);
+    let description = descMatch ? descMatch[1].trim() : "";
+
+    // Extract OGP image
+    const imgMatch = htmlText.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i);
+    let imageUrl = imgMatch ? imgMatch[1].replace(/&amp;/g, "&").trim() : "";
 
     return {
       success: true,
@@ -415,7 +399,9 @@ async function fetchPixivDic(query) {
       html: htmlText,
       query,
       targetUrl: finalUrl,
-      isDirectPage
+      title: title || query,
+      extract: description,
+      thumbnail: imageUrl
     };
   } catch (err) {
     console.error("[Background] Fetch Pixiv Dic error:", err);

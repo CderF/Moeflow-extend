@@ -1786,7 +1786,7 @@ function doMwikiSearch() {
     if (res.source === "moegirl") {
       renderMoegirlResults(res, query);
     } else {
-      parseAndRenderPixiv(res.html, res.query, res.targetUrl);
+      parseAndRenderPixiv(res, res.query, res.targetUrl);
     }
   });
 }
@@ -1875,73 +1875,84 @@ function renderMoegirlResults(res, query) {
   `;
 }
 
-function parseAndRenderPixiv(html, query, targetUrl) {
+function parseAndRenderPixiv(res, query, targetUrl) {
   const bodyElem = document.getElementById("mt-mwiki-body");
   if (!bodyElem) return;
 
-  if (!html || typeof html !== "string") {
-    renderMwikiError("未能获取到 Pixiv百科 数据", targetUrl);
-    return;
-  }
+  const html = typeof res === "string" ? res : (res ? res.html : "");
+  const titleFromBg = typeof res === "object" ? res.title : "";
+  const extractFromBg = typeof res === "object" ? res.extract : "";
+  const thumbFromBg = typeof res === "object" ? res.thumbnail : "";
 
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
+  let articleTitle = titleFromBg || query;
+  let summaryText = extractFromBg || "";
+  let mainImgSrc = thumbFromBg || "";
 
-    // Remove noise
-    doc.querySelectorAll("script, style, iframe, .ad, header, footer, #header, #footer").forEach(el => el.remove());
+  if (html && typeof html === "string") {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
 
-    const bodyText = doc.body ? doc.body.textContent : "";
-    const isNotFound = bodyText.includes("該当する記事はありません") ||
-      bodyText.includes("お探しの記事は見つかりませんでした") ||
-      bodyText.includes("404 Not Found") ||
-      (!doc.querySelector(".article-title") && !doc.querySelector("#main") && !doc.querySelector(".title"));
+      doc.querySelectorAll("script, style, iframe, .ad, header, footer, #header, #footer").forEach(el => el.remove());
 
-    if (isNotFound) {
-      bodyElem.innerHTML = `
-        <div class="mt-mwiki-notfound">
-          <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
-          <div class="mt-mwiki-notfound-title">Pixiv百科未找到与“${escapeHtml(query)}”匹配的词条</div>
-          <div class="mt-mwiki-notfound-sub">您可以尝试切换到“萌娘百科”Tab 查询，或直接前往 Pixiv 百科事典。</div>
-          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在 Pixiv 百科查看原网页 ↗</a>
-        </div>
-      `;
-      return;
-    }
+      const bodyText = doc.body ? doc.body.textContent : "";
+      const isNotFound = bodyText.includes("該当する記事はありません") ||
+        bodyText.includes("お探しの記事は見つかりませんでした") ||
+        bodyText.includes("404 Not Found");
 
-    const titleEl = doc.querySelector(".article-title") || doc.querySelector("h1.title") || doc.querySelector("h1");
-    const articleTitle = titleEl ? titleEl.textContent.trim() : query;
-
-    const summaryEl = doc.querySelector(".article-summary") || doc.querySelector(".summary") || doc.querySelector(".lead") || doc.querySelector("p");
-    const summaryText = summaryEl ? summaryEl.textContent.trim() : "";
-
-    const mainImgEl = doc.querySelector(".main-image img") || doc.querySelector(".article-body img") || doc.querySelector(".pixiv-image img");
-    let mainImgSrc = mainImgEl ? (mainImgEl.getAttribute("src") || mainImgEl.getAttribute("data-src")) : "";
-    if (mainImgSrc && mainImgSrc.startsWith("//")) {
-      mainImgSrc = "https:" + mainImgSrc;
-    }
-
-    let thumbHtml = mainImgSrc ? `<img src="${escapeHtml(mainImgSrc)}" class="mt-mwiki-thumb" alt="${escapeHtml(articleTitle)}" />` : "";
-    let summaryHtml = summaryText ? `<div class="mt-mwiki-extract">${escapeHtml(summaryText)}</div>` : "";
-
-    bodyElem.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <div class="mt-mwiki-card">
-          <div class="mt-mwiki-card-title">
-            <span>${escapeHtml(articleTitle)}</span>
+      if (isNotFound && !summaryText) {
+        bodyElem.innerHTML = `
+          <div class="mt-mwiki-notfound">
+            <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+            <div class="mt-mwiki-notfound-title">Pixiv百科未找到与“${escapeHtml(query)}”匹配的词条</div>
+            <div class="mt-mwiki-notfound-sub">您可以尝试切换到“萌娘百科”Tab 查询，或直接前往 Pixiv 百科事典。</div>
+            <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在 Pixiv 百科查看原网页 ↗</a>
           </div>
-          ${thumbHtml}
-          ${summaryHtml}
-        </div>
-        <div class="mt-mwiki-footer-link">
-          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在 Pixiv 百科查看原网页 ↗</a>
-        </div>
-      </div>
-    `;
-  } catch (err) {
-    console.error("[Content] Pixiv HTML parse error:", err);
-    renderMwikiError("解析 Pixiv百科 数据失败", targetUrl);
+        `;
+        return;
+      }
+
+      if (!articleTitle || articleTitle === query) {
+        const titleEl = doc.querySelector(".article-title") || doc.querySelector("h1.title") || doc.querySelector("h1");
+        if (titleEl) articleTitle = titleEl.textContent.trim();
+      }
+
+      if (!summaryText) {
+        const summaryEl = doc.querySelector(".article-summary") || doc.querySelector(".summary") || doc.querySelector(".lead") || doc.querySelector("p");
+        if (summaryEl) summaryText = summaryEl.textContent.trim();
+      }
+
+      if (!mainImgSrc) {
+        const mainImgEl = doc.querySelector(".main-image img") || doc.querySelector(".article-body img") || doc.querySelector(".pixiv-image img");
+        if (mainImgEl) {
+          mainImgSrc = mainImgEl.getAttribute("src") || mainImgEl.getAttribute("data-src") || "";
+          if (mainImgSrc && mainImgSrc.startsWith("//")) {
+            mainImgSrc = "https:" + mainImgSrc;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[Content] Pixiv DOMParser parse fallback:", e);
+    }
   }
+
+  let thumbHtml = mainImgSrc ? `<img src="${escapeHtml(mainImgSrc)}" class="mt-mwiki-thumb" alt="${escapeHtml(articleTitle)}" />` : "";
+  let summaryHtml = summaryText ? `<div class="mt-mwiki-extract">${escapeHtml(summaryText)}</div>` : "";
+
+  bodyElem.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div class="mt-mwiki-card">
+        <div class="mt-mwiki-card-title">
+          <span>${escapeHtml(articleTitle)}</span>
+        </div>
+        ${thumbHtml}
+        ${summaryHtml}
+      </div>
+      <div class="mt-mwiki-footer-link">
+        <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在 Pixiv 百科查看原网页 ↗</a>
+      </div>
+    </div>
+  `;
 }
 
 function escapeHtml(str) {
