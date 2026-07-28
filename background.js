@@ -183,6 +183,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         }
 
+        case "FETCH_MEME_WIKI": {
+          const { query, wikiType } = message;
+          if (!query || typeof query !== "string") {
+            sendResponse({ success: false, error: "请输入需要查询的词汇" });
+            break;
+          }
+          const trimmed = query.trim();
+          if (wikiType === "pixiv") {
+            const pixivResult = await fetchPixivDic(trimmed);
+            sendResponse(pixivResult);
+          } else {
+            const moegirlResult = await fetchMoegirlWiki(trimmed);
+            sendResponse(moegirlResult);
+          }
+          break;
+        }
+
         default:
           sendResponse({ success: false, error: "Unknown message type" });
           break;
@@ -284,6 +301,125 @@ async function fetchMojiDict(query) {
   } catch (err) {
     console.error("[Background] MOJi search error:", err);
     return { success: false, error: "MOJi 辞書网络请求失败", targetUrl, source: "moji" };
+  }
+}
+
+/**
+ * Fetch entry summary & search results from 萌娘百科 (Moegirl Wiki) MediaWiki API
+ */
+async function fetchMoegirlWiki(query) {
+  const targetUrl = `https://zh.moegirl.org.cn/index.php?search=${encodeURIComponent(query)}`;
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*"
+  };
+
+  try {
+    const searchApi = `https://zh.moegirl.org.cn/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&utf8=1`;
+    const searchRes = await fetch(searchApi, { headers });
+
+    if (!searchRes.ok) {
+      return { success: false, error: `萌娘百科 API 响应异常 (HTTP ${searchRes.status})`, targetUrl, source: "moegirl" };
+    }
+
+    const searchData = await searchRes.json();
+    const searchList = searchData.query && searchData.query.search ? searchData.query.search : [];
+
+    if (searchList.length === 0) {
+      return { success: true, source: "moegirl", query, targetUrl, results: [] };
+    }
+
+    const topItem = searchList[0];
+    const pageTitle = topItem.title;
+    const pageTargetUrl = `https://zh.moegirl.org.cn/${encodeURIComponent(pageTitle)}`;
+
+    // Fetch extract and thumbnail for top search result
+    let extractText = "";
+    let thumbnailUrl = "";
+    try {
+      const detailApi = `https://zh.moegirl.org.cn/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&piprop=original&titles=${encodeURIComponent(pageTitle)}&format=json&utf8=1`;
+      const detailRes = await fetch(detailApi, { headers });
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        if (detailData.query && detailData.query.pages) {
+          const pages = detailData.query.pages;
+          const pageObj = Object.values(pages)[0];
+          if (pageObj) {
+            extractText = pageObj.extract || "";
+            if (pageObj.original && pageObj.original.source) {
+              thumbnailUrl = pageObj.original.source;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[Background] Moegirl detail fetch sub-error:", e);
+    }
+
+    const formattedList = searchList.slice(0, 5).map(item => ({
+      title: item.title,
+      snippet: item.snippet ? item.snippet.replace(/<[^>]+>/g, "") : "",
+      url: `https://zh.moegirl.org.cn/${encodeURIComponent(item.title)}`
+    }));
+
+    return {
+      success: true,
+      source: "moegirl",
+      query,
+      targetUrl: pageTargetUrl,
+      title: pageTitle,
+      extract: extractText || topItem.snippet ? topItem.snippet.replace(/<[^>]+>/g, "") : "",
+      thumbnail: thumbnailUrl,
+      results: formattedList
+    };
+  } catch (err) {
+    console.error("[Background] Moegirl search error:", err);
+    return { success: false, error: "萌娘百科网络请求失败，请检查网络连接", targetUrl, source: "moegirl" };
+  }
+}
+
+/**
+ * Fetch article HTML from ピクシブ百科事典 (Pixiv Dic)
+ */
+async function fetchPixivDic(query) {
+  const targetUrl = `https://dic.pixiv.net/a/${encodeURIComponent(query)}`;
+  const searchUrl = `https://dic.pixiv.net/search?query=${encodeURIComponent(query)}`;
+  const headers = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,zh-CN,zh;q=0.9,en;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  };
+
+  try {
+    let res = await fetch(targetUrl, { headers });
+    let isDirectPage = res.ok;
+    let finalUrl = targetUrl;
+    let htmlText = "";
+
+    if (isDirectPage) {
+      htmlText = await res.text();
+    } else {
+      // Try search endpoint
+      finalUrl = searchUrl;
+      res = await fetch(searchUrl, { headers });
+      if (res.ok) {
+        htmlText = await res.text();
+      } else {
+        return { success: false, error: `Pixiv百科 请求失败 (HTTP ${res.status})`, targetUrl: searchUrl, source: "pixiv" };
+      }
+    }
+
+    return {
+      success: true,
+      source: "pixiv",
+      html: htmlText,
+      query,
+      targetUrl: finalUrl,
+      isDirectPage
+    };
+  } catch (err) {
+    console.error("[Background] Fetch Pixiv Dic error:", err);
+    return { success: false, error: "Pixiv百科网络请求失败，请检查网络连接", targetUrl: searchUrl, source: "pixiv" };
   }
 }
 

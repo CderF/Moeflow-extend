@@ -97,6 +97,17 @@ Moeflow-extend/
 3. **窗口拖拽与记忆**：
    - 词典窗口可通过 Header 拖拽，位置持久化至 `chrome.storage.local` (`mt-jdict-pos`)。
 
+### 梗百科助手 (萌娘百科 + Pixiv百科)
+1. **萌娘百科 (Moegirl Wiki)**：
+   - 接口 1: `GET https://zh.moegirl.org.cn/api.php?action=query&list=search&srsearch={query}&format=json&utf8=1` (检索相关词条列表)
+   - 接口 2: `GET https://zh.moegirl.org.cn/api.php?action=query&prop=extracts|pageimages&exintro=1&explaintext=1&piprop=original&titles={title}&format=json&utf8=1` (提取词条导言摘要与首图)
+2. **ピクシブ百科事典 (Pixiv Dic)**：
+   - Service Worker 后台请求 `https://dic.pixiv.net/a/{query}` / `https://dic.pixiv.net/search?query={query}`
+   - `content.js` 使用 `DOMParser` 解析 DOM，清洗广告与无用元素，渲染文章标题、导言摘要、精选主图与“在 Pixiv 百科查看原网页 ↗”外链按钮。
+3. **窗口拖拽、记忆与选中文本联动**：
+   - 梗百科窗口可通过 Header 拖拽，位置持久化至 `chrome.storage.local` (`mt-mwiki-pos`)。
+   - 选中文本时点击胶囊按钮，可自动填充选中的网络梗/词条文本并触发快速查询。
+
 ### 日文常用符号快捷输入面板 (`mt-action-jsym`)
 1. **输入框焦点感知与光标插入 (`insertSymbol`)**：
    - 监听点击符号按钮事件，判断当前焦点元素 `document.activeElement` 是否为 `<input>`、`<textarea>` 或 `contentEditable` 富文本。

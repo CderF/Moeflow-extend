@@ -287,6 +287,46 @@ function initFloatingWidget() {
       <div class="mt-jsym-hint" id="mt-jsym-hint"></div>
       <div class="mt-jsym-body" id="mt-jsym-body"></div>
     </div>
+
+    <!-- Meme Encyclopedia Modal Window (Moegirl & Pixiv) -->
+    <div class="mt-mwiki-modal" id="mt-mwiki-modal-box">
+      <div class="mt-mwiki-header" id="mt-mwiki-header">
+        <div class="mt-mwiki-title">
+          <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span>梗百科</span>
+        </div>
+        <button class="mt-mwiki-close" id="mt-mwiki-close-btn">&times;</button>
+      </div>
+
+      <div class="mt-mwiki-search-section">
+        <div class="mt-mwiki-tabs" id="mt-mwiki-tabs">
+          <button class="mt-mwiki-tab mt-active" data-wiki-type="moegirl" id="mt-tab-moegirl">萌娘百科 (zh.moegirl)</button>
+          <button class="mt-mwiki-tab" data-wiki-type="pixiv" id="mt-tab-pixiv">Pixiv百科 (dic.pixiv)</button>
+        </div>
+        <div class="mt-mwiki-search-box">
+          <input type="text" class="mt-mwiki-input" id="mt-mwiki-input" placeholder="输入网络梗 / ACG 词条..." autocomplete="off" />
+          <button class="mt-mwiki-search-btn" id="mt-mwiki-search-btn">
+            <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            搜索
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-mwiki-body" id="mt-mwiki-body">
+        <div class="mt-mwiki-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="36" height="36" style="opacity:0.4; margin-bottom:10px;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <div>在上方输入框输入网络梗或词条，查询 萌娘百科 / Pixiv 百科事典 释义</div>
+        </div>
+      </div>
+    </div>
   `;
 
   document.body.appendChild(container);
@@ -310,6 +350,14 @@ function initFloatingWidget() {
   const jsymModalBox = document.getElementById("mt-jsym-modal-box");
   const jsymHeader = document.getElementById("mt-jsym-header");
   const jsymCloseBtn = document.getElementById("mt-jsym-close-btn");
+
+  // Meme Encyclopedia DOM references
+  const mwikiModalBox = document.getElementById("mt-mwiki-modal-box");
+  const mwikiHeader = document.getElementById("mt-mwiki-header");
+  const mwikiCloseBtn = document.getElementById("mt-mwiki-close-btn");
+  const mwikiInput = document.getElementById("mt-mwiki-input");
+  const mwikiSearchBtn = document.getElementById("mt-mwiki-search-btn");
+  const mwikiTabs = document.querySelectorAll("#mt-mwiki-tabs .mt-mwiki-tab");
 
   // --- Level-2 Theme Sub-capsule Manager ---
   const level2ThemeMenu = document.getElementById("mt-theme-level2-menu");
@@ -398,8 +446,26 @@ function initFloatingWidget() {
   const openJdictPanel = () => {
     positionJdictModal(jdictModalBox);
     jdictModalBox.classList.add("mt-active");
+    const selectedText = window.getSelection() ? window.getSelection().toString().trim() : "";
     if (jdictInput) {
+      if (selectedText && selectedText.length < 50 && !jdictInput.value.trim()) {
+        jdictInput.value = selectedText;
+        doJdictSearch();
+      }
       setTimeout(() => jdictInput.focus(), 100);
+    }
+  };
+
+  const openMwikiPanel = () => {
+    positionMwikiModal(mwikiModalBox);
+    mwikiModalBox.classList.add("mt-active");
+    const selectedText = window.getSelection() ? window.getSelection().toString().trim() : "";
+    if (mwikiInput) {
+      if (selectedText && selectedText.length < 50 && !mwikiInput.value.trim()) {
+        mwikiInput.value = selectedText;
+        doMwikiSearch();
+      }
+      setTimeout(() => mwikiInput.focus(), 100);
     }
   };
 
@@ -421,6 +487,13 @@ function initFloatingWidget() {
       icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`,
       label: "日语辞書",
       handler: openJdictPanel,
+    },
+    {
+      id: "mt-action-mwiki",
+      // Sparkles / Star icon — Meme Encyclopedia
+      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+      label: "梗百科",
+      handler: openMwikiPanel,
     },
     {
       id: "mt-action-jsym",
@@ -554,6 +627,39 @@ function initFloatingWidget() {
   }
 
 
+  // Bind Meme Encyclopedia Event Listeners
+  if (mwikiCloseBtn) {
+    mwikiCloseBtn.addEventListener("click", () => {
+      mwikiModalBox.classList.remove("mt-active");
+    });
+  }
+
+  if (mwikiSearchBtn) {
+    mwikiSearchBtn.addEventListener("click", doMwikiSearch);
+  }
+
+  if (mwikiInput) {
+    mwikiInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        doMwikiSearch();
+      }
+    });
+  }
+
+  if (mwikiTabs) {
+    mwikiTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        if (tab.classList.contains("mt-active")) return;
+        mwikiTabs.forEach((t) => t.classList.remove("mt-active"));
+        tab.classList.add("mt-active");
+        if (mwikiInput && mwikiInput.value.trim()) {
+          doMwikiSearch();
+        }
+      });
+    });
+  }
+
   // --- Position Initialization ---
   triggerBtn.style.left = (window.innerWidth - 200) + 'px';
   triggerBtn.style.top = (window.innerHeight - 60) + 'px';
@@ -576,6 +682,7 @@ function initFloatingWidget() {
   const drag = initDragBehavior(triggerBtn, subMenu, modalBox);
   initJdictDragBehavior(jdictModalBox, jdictHeader);
   initJsymDragBehavior(jsymModalBox, jsymHeader);
+  initMwikiDragBehavior(mwikiModalBox, mwikiHeader);
 
   // --- Main capsule click: toggle sub-capsule menu ---
   triggerBtn.addEventListener("click", () => {
@@ -1283,6 +1390,108 @@ function initJsymDragBehavior(modalBox, headerElem) {
   });
 }
 
+// --- Meme Encyclopedia Window Functions ---
+function positionMwikiModal(modalBox) {
+  if (!modalBox) return;
+  chrome.storage.local.get("mt-mwiki-pos", (data) => {
+    requestAnimationFrame(() => {
+      const boxW = modalBox.offsetWidth || 440;
+      const boxH = modalBox.offsetHeight || 520;
+      if (data && data["mt-mwiki-pos"]) {
+        const pos = data["mt-mwiki-pos"];
+        const left = Math.max(0, Math.min(pos.left, window.innerWidth - boxW));
+        const top = Math.max(0, Math.min(pos.top, window.innerHeight - boxH));
+        modalBox.style.left = left + "px";
+        modalBox.style.top = top + "px";
+      } else {
+        modalBox.style.left = Math.max(0, (window.innerWidth - boxW) / 2) + "px";
+        modalBox.style.top = Math.max(0, (window.innerHeight - boxH) / 2) + "px";
+      }
+      modalBox.style.right = "auto";
+      modalBox.style.bottom = "auto";
+    });
+  });
+}
+
+function initMwikiDragBehavior(modalBox, headerElem) {
+  if (!modalBox || !headerElem) return;
+  const DRAG_THRESHOLD = 5;
+  let startX, startY, startLeft, startTop;
+  let isPointerDown = false;
+  let isDragging = false;
+
+  headerElem.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("#mt-mwiki-close-btn")) return;
+    if (e.button !== 0) return;
+
+    const rect = modalBox.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = rect.left;
+    startTop = rect.top;
+
+    modalBox.style.left = startLeft + "px";
+    modalBox.style.top = startTop + "px";
+    modalBox.style.right = "auto";
+    modalBox.style.bottom = "auto";
+
+    isPointerDown = true;
+    isDragging = false;
+    headerElem.setPointerCapture(e.pointerId);
+  });
+
+  headerElem.addEventListener("pointermove", (e) => {
+    if (!isPointerDown || !headerElem.hasPointerCapture(e.pointerId)) return;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (!isDragging) {
+      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+        isDragging = true;
+        modalBox.classList.add("mt-dragging");
+      }
+      return;
+    }
+
+    const boxW = modalBox.offsetWidth;
+    const boxH = modalBox.offsetHeight;
+    const newLeft = Math.max(0, Math.min(startLeft + dx, window.innerWidth - boxW));
+    const newTop = Math.max(0, Math.min(startTop + dy, window.innerHeight - boxH));
+
+    modalBox.style.left = newLeft + "px";
+    modalBox.style.top = newTop + "px";
+  });
+
+  const onRelease = () => {
+    if (isDragging) {
+      const left = parseFloat(modalBox.style.left);
+      const top = parseFloat(modalBox.style.top);
+      if (!isNaN(left) && !isNaN(top)) {
+        chrome.storage.local.set({ "mt-mwiki-pos": { left, top } });
+      }
+    }
+    modalBox.classList.remove("mt-dragging");
+    isPointerDown = false;
+    isDragging = false;
+  };
+
+  headerElem.addEventListener("pointerup", onRelease);
+  headerElem.addEventListener("pointercancel", onRelease);
+
+  window.addEventListener("resize", () => {
+    if (!modalBox.classList.contains("mt-active")) return;
+    const boxW = modalBox.offsetWidth;
+    const boxH = modalBox.offsetHeight;
+    const curLeft = parseFloat(modalBox.style.left) || (window.innerWidth - boxW) / 2;
+    const curTop = parseFloat(modalBox.style.top) || (window.innerHeight - boxH) / 2;
+    const cl = Math.max(0, Math.min(curLeft, window.innerWidth - boxW));
+    const ct = Math.max(0, Math.min(curTop, window.innerHeight - boxH));
+    modalBox.style.left = cl + "px";
+    modalBox.style.top = ct + "px";
+  });
+}
+
 /**
  * Inserts a symbol at the current cursor position of the focused input element.
  * Handles both standard <input>/<textarea> and contentEditable (e.g. rich text editors).
@@ -1540,6 +1749,199 @@ function renderJdictError(errMsg, targetUrl) {
       ${targetUrl ? `<a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-jdict-link-btn">直接前往 Weblio 查看 ↗</a>` : ""}
     </div>
   `;
+}
+
+function doMwikiSearch() {
+  const inputElem = document.getElementById("mt-mwiki-input");
+  const bodyElem = document.getElementById("mt-mwiki-body");
+  if (!inputElem || !bodyElem) return;
+
+  const query = inputElem.value.trim();
+  if (!query) {
+    inputElem.focus();
+    return;
+  }
+
+  const activeTab = document.querySelector("#mt-mwiki-tabs .mt-mwiki-tab.mt-active");
+  const wikiType = activeTab ? activeTab.getAttribute("data-wiki-type") : "moegirl";
+  const wikiName = (wikiType === "pixiv") ? "Pixiv 百科" : "萌娘百科";
+
+  bodyElem.innerHTML = `
+    <div class="mt-mwiki-loading">
+      <svg class="mt-sf-icon" style="animation: sf-spin 1s infinite linear; width: 24px; height: 24px; color: var(--mt-sf-blue);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6"/>
+        <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1 1A10 10 0 0 0 22 12.5"/>
+      </svg>
+      <div style="margin-top: 10px; font-size: 13px; color: var(--mt-text-sub);">正在查询 ${wikiName}...</div>
+    </div>
+  `;
+
+  safeSendMessage({ type: "FETCH_MEME_WIKI", query, wikiType }, (res) => {
+    if (!res || !res.success) {
+      const errMsg = (res && res.error) ? res.error : "网络请求失败，请稍后再试";
+      renderMwikiError(errMsg, res ? res.targetUrl : null);
+      return;
+    }
+
+    if (res.source === "moegirl") {
+      renderMoegirlResults(res, query);
+    } else {
+      parseAndRenderPixiv(res.html, res.query, res.targetUrl);
+    }
+  });
+}
+
+function renderMwikiError(errMsg, targetUrl) {
+  const bodyElem = document.getElementById("mt-mwiki-body");
+  if (!bodyElem) return;
+
+  let linkBtn = targetUrl
+    ? `<a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">前往网页端搜索 ↗</a>`
+    : "";
+
+  bodyElem.innerHTML = `
+    <div class="mt-mwiki-notfound">
+      <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
+      <div class="mt-mwiki-notfound-title">${escapeHtml(errMsg)}</div>
+      ${linkBtn}
+    </div>
+  `;
+}
+
+function renderMoegirlResults(res, query) {
+  const bodyElem = document.getElementById("mt-mwiki-body");
+  if (!bodyElem) return;
+
+  const targetUrl = res.targetUrl || `https://zh.moegirl.org.cn/index.php?search=${encodeURIComponent(query)}`;
+  const results = res.results || [];
+  const title = res.title;
+  const extract = res.extract;
+  const thumbnail = res.thumbnail;
+
+  if ((!results || results.length === 0) && !title) {
+    bodyElem.innerHTML = `
+      <div class="mt-mwiki-notfound">
+        <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+        <div class="mt-mwiki-notfound-title">萌娘百科未找到与“${escapeHtml(query)}”匹配的词条</div>
+        <div class="mt-mwiki-notfound-sub">您可以尝试切换到“Pixiv百科”Tab 查询，或直接前往萌娘百科。</div>
+        <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在萌娘百科网页版查看 ↗</a>
+      </div>
+    `;
+    return;
+  }
+
+  let mainCardHtml = "";
+  if (title) {
+    let thumbHtml = thumbnail ? `<img src="${escapeHtml(thumbnail)}" class="mt-mwiki-thumb" alt="${escapeHtml(title)}" />` : "";
+    let extractHtml = extract ? `<div class="mt-mwiki-extract">${escapeHtml(extract)}</div>` : "";
+    mainCardHtml = `
+      <div class="mt-mwiki-card">
+        <div class="mt-mwiki-card-title">
+          <span>${escapeHtml(title)}</span>
+        </div>
+        ${thumbHtml}
+        ${extractHtml}
+      </div>
+    `;
+  }
+
+  let subItemsHtml = "";
+  if (results && results.length > 1) {
+    let listHtml = "";
+    results.slice(1).forEach(item => {
+      listHtml += `
+        <div class="mt-mwiki-subitem">
+          <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-subitem-title">${escapeHtml(item.title)} ↗</a>
+          ${item.snippet ? `<div class="mt-mwiki-subitem-snippet">${escapeHtml(item.snippet)}...</div>` : ""}
+        </div>
+      `;
+    });
+    subItemsHtml = `
+      <div style="margin-top:12px;">
+        <div style="font-size:12px; font-weight:600; color:var(--mt-text-sub); margin-bottom:6px;">相关搜索条目：</div>
+        ${listHtml}
+      </div>
+    `;
+  }
+
+  bodyElem.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      ${mainCardHtml}
+      ${subItemsHtml}
+      <div class="mt-mwiki-footer-link">
+        <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在萌娘百科查看原网页 ↗</a>
+      </div>
+    </div>
+  `;
+}
+
+function parseAndRenderPixiv(html, query, targetUrl) {
+  const bodyElem = document.getElementById("mt-mwiki-body");
+  if (!bodyElem) return;
+
+  if (!html || typeof html !== "string") {
+    renderMwikiError("未能获取到 Pixiv百科 数据", targetUrl);
+    return;
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // Remove noise
+    doc.querySelectorAll("script, style, iframe, .ad, header, footer, #header, #footer").forEach(el => el.remove());
+
+    const bodyText = doc.body ? doc.body.textContent : "";
+    const isNotFound = bodyText.includes("該当する記事はありません") ||
+      bodyText.includes("お探しの記事は見つかりませんでした") ||
+      bodyText.includes("404 Not Found") ||
+      (!doc.querySelector(".article-title") && !doc.querySelector("#main") && !doc.querySelector(".title"));
+
+    if (isNotFound) {
+      bodyElem.innerHTML = `
+        <div class="mt-mwiki-notfound">
+          <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+          <div class="mt-mwiki-notfound-title">Pixiv百科未找到与“${escapeHtml(query)}”匹配的词条</div>
+          <div class="mt-mwiki-notfound-sub">您可以尝试切换到“萌娘百科”Tab 查询，或直接前往 Pixiv 百科事典。</div>
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在 Pixiv 百科查看原网页 ↗</a>
+        </div>
+      `;
+      return;
+    }
+
+    const titleEl = doc.querySelector(".article-title") || doc.querySelector("h1.title") || doc.querySelector("h1");
+    const articleTitle = titleEl ? titleEl.textContent.trim() : query;
+
+    const summaryEl = doc.querySelector(".article-summary") || doc.querySelector(".summary") || doc.querySelector(".lead") || doc.querySelector("p");
+    const summaryText = summaryEl ? summaryEl.textContent.trim() : "";
+
+    const mainImgEl = doc.querySelector(".main-image img") || doc.querySelector(".article-body img") || doc.querySelector(".pixiv-image img");
+    let mainImgSrc = mainImgEl ? (mainImgEl.getAttribute("src") || mainImgEl.getAttribute("data-src")) : "";
+    if (mainImgSrc && mainImgSrc.startsWith("//")) {
+      mainImgSrc = "https:" + mainImgSrc;
+    }
+
+    let thumbHtml = mainImgSrc ? `<img src="${escapeHtml(mainImgSrc)}" class="mt-mwiki-thumb" alt="${escapeHtml(articleTitle)}" />` : "";
+    let summaryHtml = summaryText ? `<div class="mt-mwiki-extract">${escapeHtml(summaryText)}</div>` : "";
+
+    bodyElem.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div class="mt-mwiki-card">
+          <div class="mt-mwiki-card-title">
+            <span>${escapeHtml(articleTitle)}</span>
+          </div>
+          ${thumbHtml}
+          ${summaryHtml}
+        </div>
+        <div class="mt-mwiki-footer-link">
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="mt-mwiki-link-btn">在 Pixiv 百科查看原网页 ↗</a>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    console.error("[Content] Pixiv HTML parse error:", err);
+    renderMwikiError("解析 Pixiv百科 数据失败", targetUrl);
+  }
 }
 
 function escapeHtml(str) {
