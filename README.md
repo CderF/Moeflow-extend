@@ -62,6 +62,17 @@
 </details>
 
 <details open>
+<summary><b>▸ 内置梗百科 (萌娘百科 + Pixiv百科)</b></summary>
+<br>
+
+| 梗百科弹窗 (萌娘百科 / Pixiv百科) |
+| :---: |
+| ![梗百科界面](img/screenshots/mwiki.png) |
+| *解析网络梗/ACG词条导言、图文摘要与外链，支持选中文本一键快捷查询* |
+
+</details>
+
+<details open>
 <summary><b>▸ 日文常用符号快捷输入面板</b></summary>
 <br>
 
@@ -115,9 +126,9 @@
 ```text
 Moeflow-extend/
 ├── manifest.json             # Chrome Extension Manifest V3 配置文件
-├── background.js             # Service Worker 后台服务 (统计刷新、API 中转与字典请求)
-├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、符号面板、单项目统计)
-├── content.css               # 悬浮挂件、词典窗口、符号面板与 Modal 样式 (iOS Dynamic Island 风格)
+├── background.js             # Service Worker 后台服务 (统计刷新、API 中转、辞書/梗百科代理)
+├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、梗百科、符号面板)
+├── content.css               # 悬浮挂件、词典/梗百科窗口、符号面板与 Modal 样式 (iOS Dynamic Island 风格)
 ├── popup.html                # 扩展 Popup 视图 HTML
 ├── popup.js                  # 扩展 Popup 逻辑 (数据渲染与诊断测试)
 ├── popup.css                 # 扩展 Popup 样式 (Apple SF 风格 Design Tokens)
@@ -131,9 +142,11 @@ Moeflow-extend/
 ├── img/
 │   ├── cotton.png            # 插件主图标 (棉花)
 │   ├── icon.png              # 默认浅色图标
-│   └── icon-white.png        # 默认深色图标
+│   ├── icon-white.png        # 默认深色图标
+│   └── screenshots/          # 功能演示截图与 GIF 目录
 ├── tests/
-│   └── theme.spec.mjs        # Playwright E2E 自动化测试
+│   ├── theme.spec.mjs        # 主题与挂件 Playwright E2E 自动化测试
+│   └── mwiki.spec.mjs        # 梗百科弹窗 Playwright E2E 自动化测试
 ├── AGENTS.md                 # AI Agent 开发指南与架构规范
 └── README.md                 # 项目说明文档
 ```
@@ -149,10 +162,12 @@ Moeflow-extend/
   - `GET /v1/teams/{teamId}/members`: 种植园汉化组成员角色解析
   - `MOJi 辞書 API`: `https://api.mojidict.com/app/mojidict/api/v2/search/all` & `v1/word/detailInfo`
   - `Weblio API`: `https://www.weblio.jp/content/` (Service Worker 后台代理请求并清洗)
+  - `萌娘百科 (Moegirl Wiki)`: `https://zh.moegirl.org.cn/index.php?search=` (Service Worker 提取导言/摘要/首图)
+  - `Pixiv 百科事典 (Pixiv Dic)`: `https://dic.pixiv.net/a/` & `https://dic.pixiv.net/search` (原生解析释义与 OGP 插图)
 - **网络规则 (declarativeNetRequest)**:
   - 通过 `rules.json` 给 `*m-t.pics*` 与 `*moetran.com/avatars*` 补充 Referer 与 Origin 请求头，消除 403 跨域阻断。
 - **自动化测试**:
-  - 执行 `npx playwright test tests/theme.spec.mjs` 运行 E2E 主题与挂件测试。
+  - 执行 `npx playwright test tests/theme.spec.mjs tests/mwiki.spec.mjs` 运行 E2E 自动化测试。
 
 ---
 
@@ -160,3 +175,4 @@ Moeflow-extend/
 
 - **隐私政策**：详见 [Privacy Policy.md](Privacy%20Policy.md)。扩展仅在本地读取必须的登录凭证与统计接口，保护用户个人数据安全。
 - **开源许可证**：本项目采用 [MIT License](LICENSE) 许可证。
+
