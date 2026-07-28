@@ -3,7 +3,8 @@
  * Handles background statistics sync, message handling, and token management.
  */
 
-import { getUserInfo, getUserProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, TEAM_PLANTATION_ID } from "./utils/moetranApi.js";
+import { getUserInfo, getUserProjects, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
+import { syncMangaToFeishu, saveFeishuConfig, getFeishuConfig } from "./utils/feishuSync.js";
 
 async function injectContentScriptToAllTabs() {
   try {
@@ -196,6 +197,131 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           } else {
             const moegirlResult = await fetchMoegirlWiki(trimmed);
             sendResponse(moegirlResult);
+          }
+          break;
+        }
+
+        case "SAVE_FEISHU_CONFIG": {
+          const { config } = message;
+          if (config) {
+            await saveFeishuConfig(config);
+            sendResponse({ success: true });
+          } else {
+            sendResponse({ success: false, error: "未接收到有效的配置对象" });
+          }
+          break;
+        }
+
+        case "GET_FEISHU_CONFIG": {
+          const cfg = await getFeishuConfig();
+          sendResponse({ success: true, config: cfg });
+          break;
+        }
+
+        case "SYNC_PROJECT_TO_FEISHU": {
+          const { projectId } = message;
+          if (!projectId) {
+            sendResponse({ success: false, error: "未提供项目 ID" });
+            break;
+          }
+          try {
+            const allProjects = await getUserProjects(1, 100);
+            const targetProj = allProjects.find(p => String(p.id || p._id) === String(projectId));
+            if (!targetProj) {
+              sendResponse({ success: false, error: "未找到指定的项目" });
+              break;
+            }
+
+            const mangaName = extractMangaName(targetProj);
+            const mangaProjects = allProjects.filter(p => extractMangaName(p) === mangaName);
+            const rows = buildFeishuRowsFromProjects(mangaProjects);
+
+            if (rows.length > 0) {
+              const res = await syncMangaToFeishu(rows[0]);
+              sendResponse({ success: true, result: res });
+            } else {
+              sendResponse({ success: false, error: "构建飞书行数据失败" });
+            }
+          } catch (syncErr) {
+            console.warn("[Background] Sync single project to Feishu failed:", syncErr);
+            sendResponse({ success: false, error: syncErr.message });
+          }
+          break;
+        }
+
+        case "SYNC_RECENT_TO_FEISHU": {
+          try {
+            const projects = await getUserProjects(1, 100);
+            const recentProjects = projects.slice(0, 10);
+            const rows = buildFeishuRowsFromProjects(recentProjects);
+
+            if (!rows || rows.length === 0) {
+              sendResponse({ success: false, error: "未找到任何待同步的项目" });
+              break;
+            }
+
+            const results = [];
+            let successCount = 0;
+            let firstErrorMsg = "";
+
+            for (const row of rows) {
+              try {
+                const res = await syncMangaToFeishu(row);
+                results.push({ success: true, ...res });
+                successCount++;
+              } catch (e) {
+                console.warn(`[Background] Failed to sync manga ${row.mangaName}:`, e);
+                results.push({ success: false, mangaName: row.mangaName, error: e.message });
+                if (!firstErrorMsg) firstErrorMsg = e.message;
+              }
+            }
+
+            if (successCount > 0) {
+              sendResponse({ success: true, syncedCount: successCount, totalCount: rows.length, results });
+            } else {
+              sendResponse({ success: false, error: firstErrorMsg || "同步失败，无法写入飞书表格", results });
+            }
+          } catch (syncErr) {
+            console.error("[Background] Sync recent 10 projects to Feishu failed:", syncErr);
+            sendResponse({ success: false, error: syncErr.message });
+          }
+          break;
+        }
+
+        case "BULK_SYNC_PLANTATION_TO_FEISHU": {
+          try {
+            const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+            const rows = buildFeishuRowsFromProjects(teamProjects);
+
+            if (!rows || rows.length === 0) {
+              sendResponse({ success: false, error: "未在种植园汉化组找到任何项目" });
+              break;
+            }
+
+            const results = [];
+            let successCount = 0;
+            let firstErrorMsg = "";
+
+            for (const row of rows) {
+              try {
+                const res = await syncMangaToFeishu(row);
+                results.push({ success: true, ...res });
+                successCount++;
+              } catch (e) {
+                console.warn(`[Background] Failed to sync plantation manga ${row.mangaName}:`, e);
+                results.push({ success: false, mangaName: row.mangaName, error: e.message });
+                if (!firstErrorMsg) firstErrorMsg = e.message;
+              }
+            }
+
+            if (successCount > 0) {
+              sendResponse({ success: true, syncedCount: successCount, totalCount: rows.length, results });
+            } else {
+              sendResponse({ success: false, error: firstErrorMsg || "全量同步失败，无法写入飞书表格", results });
+            }
+          } catch (syncErr) {
+            console.error("[Background] Bulk sync plantation projects to Feishu failed:", syncErr);
+            sendResponse({ success: false, error: syncErr.message });
           }
           break;
         }

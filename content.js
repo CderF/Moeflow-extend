@@ -1967,3 +1967,28 @@ function escapeHtml(str) {
 // Execute on load
 syncAuthToken();
 initFloatingWidget();
+
+// Feishu Bitable Tab Close Auto-Sync Hook
+let hasSyncedOnClose = false;
+
+function handleTabCloseSync() {
+  if (hasSyncedOnClose) return;
+  const match = (window.location.href + " " + window.location.pathname).match(/(?:projects|workspace|editor)\/([a-fA-F0-9]{24})/);
+  if (match && match[1]) {
+    const projectId = match[1];
+    hasSyncedOnClose = true;
+    safeSendMessage({ type: "SYNC_PROJECT_TO_FEISHU", projectId });
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    handleTabCloseSync();
+  } else if (document.visibilityState === "visible") {
+    hasSyncedOnClose = false;
+  }
+});
+
+window.addEventListener("pagehide", () => {
+  handleTabCloseSync();
+});

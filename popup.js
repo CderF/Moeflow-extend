@@ -2,7 +2,8 @@ import { getUserInfo, getUserProjects, calculateWorkStats } from "./utils/moetra
 
 document.addEventListener("DOMContentLoaded", () => {
   const btnRefresh = document.getElementById("btn-refresh-popup");
-  const btnDashboard = document.getElementById("btn-open-dashboard");
+  const btnSyncFeishu = document.getElementById("btn-sync-feishu");
+  const syncBtnText = document.getElementById("sync-feishu-btn-text");
   const btnCopyReport = document.getElementById("btn-copy-report");
   const copyBtnText = document.getElementById("copy-btn-text");
   const btnToggleDiag = document.getElementById("btn-toggle-diagnostic");
@@ -89,10 +90,96 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Open Dashboard handler
-  btnDashboard.addEventListener("click", () => {
-    chrome.tabs.create({ url: "https://moetran.com/dashboard/projects" });
-  });
+  // Feishu Settings Elements & Handlers
+  const btnToggleFeishuConfig = document.getElementById("btn-toggle-feishu-config");
+  const feishuConfigBox = document.getElementById("feishu-config-box");
+  const feishuConfigArrow = document.getElementById("feishu-config-arrow");
+  const inputAppId = document.getElementById("feishu-app-id");
+  const inputAppSecret = document.getElementById("feishu-app-secret");
+  const btnSaveFeishuCfg = document.getElementById("btn-save-feishu-cfg");
+  const btnBulkSyncPlantation = document.getElementById("btn-bulk-sync-plantation");
+  const feishuCfgStatus = document.getElementById("feishu-cfg-status");
+
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
+    chrome.runtime.sendMessage({ type: "GET_FEISHU_CONFIG" }, (res) => {
+      if (chrome.runtime.lastError) return;
+      if (res && res.success && res.config) {
+        if (inputAppId && res.config.appId) inputAppId.value = res.config.appId;
+        if (inputAppSecret && res.config.appSecret) inputAppSecret.value = res.config.appSecret;
+      }
+    });
+  }
+
+  if (btnToggleFeishuConfig && feishuConfigBox) {
+    btnToggleFeishuConfig.addEventListener("click", () => {
+      const isHidden = feishuConfigBox.style.display === "none";
+      feishuConfigBox.style.display = isHidden ? "flex" : "none";
+      if (feishuConfigArrow) {
+        if (isHidden) feishuConfigArrow.classList.add("is-open");
+        else feishuConfigArrow.classList.remove("is-open");
+      }
+    });
+  }
+
+  if (btnSaveFeishuCfg) {
+    btnSaveFeishuCfg.addEventListener("click", () => {
+      const appId = inputAppId ? inputAppId.value.trim() : "";
+      const appSecret = inputAppSecret ? inputAppSecret.value.trim() : "";
+
+      btnSaveFeishuCfg.disabled = true;
+      if (feishuCfgStatus) feishuCfgStatus.textContent = "保存中...";
+
+      chrome.runtime.sendMessage({
+        type: "SAVE_FEISHU_CONFIG",
+        config: { appId, appSecret }
+      }, (res) => {
+        btnSaveFeishuCfg.disabled = false;
+        if (res && res.success) {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "✅ 配置已成功保存！";
+          setTimeout(() => { if (feishuCfgStatus) feishuCfgStatus.textContent = ""; }, 3000);
+        } else {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 保存失败: " + (res?.error || "未知错误");
+        }
+      });
+    });
+  }
+
+  if (btnSyncFeishu) {
+    btnSyncFeishu.addEventListener("click", () => {
+      btnSyncFeishu.disabled = true;
+      if (syncBtnText) syncBtnText.textContent = "正在同步...";
+
+      chrome.runtime.sendMessage({ type: "SYNC_RECENT_TO_FEISHU" }, (res) => {
+        btnSyncFeishu.disabled = false;
+        if (res && res.success) {
+          if (syncBtnText) syncBtnText.textContent = `已更新 ${res.syncedCount || 0} 个漫画`;
+          setTimeout(() => { if (syncBtnText) syncBtnText.textContent = "更新进度"; }, 3500);
+        } else {
+          if (syncBtnText) syncBtnText.textContent = "同步失败";
+          alert("同步到飞书失败: " + (res?.error || "未知错误，请先检查飞书配置凭证"));
+          setTimeout(() => { if (syncBtnText) syncBtnText.textContent = "更新进度"; }, 3500);
+        }
+      });
+    });
+  }
+
+  if (btnBulkSyncPlantation) {
+    btnBulkSyncPlantation.addEventListener("click", () => {
+      if (!confirm("确定抓取种植园汉化组的所有项目全量同步到飞书表格吗？")) return;
+
+      btnBulkSyncPlantation.disabled = true;
+      if (feishuCfgStatus) feishuCfgStatus.textContent = "正在抓取全量项目并导入飞书...";
+
+      chrome.runtime.sendMessage({ type: "BULK_SYNC_PLANTATION_TO_FEISHU" }, (res) => {
+        btnBulkSyncPlantation.disabled = false;
+        if (res && res.success) {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = `🎉 成功完成初始全量导入！共同步 ${res.syncedCount || 0} 个漫画项目`;
+        } else {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 全量导入失败: " + (res?.error || "未知错误");
+        }
+      });
+    });
+  }
 
   // Project item card click delegation
   const projectListContainer = document.getElementById("project-list-container");
