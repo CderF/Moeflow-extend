@@ -183,6 +183,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         }
 
+        case "FETCH_MEME_WIKI": {
+          const { query, wikiType } = message;
+          if (!query || typeof query !== "string") {
+            sendResponse({ success: false, error: "请输入需要查询的词汇" });
+            break;
+          }
+          const trimmed = query.trim();
+          if (wikiType === "pixiv") {
+            const pixivResult = await fetchPixivDic(trimmed);
+            sendResponse(pixivResult);
+          } else {
+            const moegirlResult = await fetchMoegirlWiki(trimmed);
+            sendResponse(moegirlResult);
+          }
+          break;
+        }
+
         default:
           sendResponse({ success: false, error: "Unknown message type" });
           break;
@@ -284,6 +301,111 @@ async function fetchMojiDict(query) {
   } catch (err) {
     console.error("[Background] MOJi search error:", err);
     return { success: false, error: "MOJi 辞書网络请求失败", targetUrl, source: "moji" };
+  }
+}
+
+/**
+ * Fetch entry summary & OGP from 萌娘百科 (Moegirl Wiki)
+ */
+async function fetchMoegirlWiki(query) {
+  const targetUrl = `https://zh.moegirl.org.cn/index.php?search=${encodeURIComponent(query)}`;
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"
+  };
+
+  try {
+    const res = await fetch(targetUrl, { headers });
+    if (!res.ok) {
+      return { success: false, error: `萌娘百科请求失败 (HTTP ${res.status})`, targetUrl, source: "moegirl" };
+    }
+
+    const finalUrl = res.url || targetUrl;
+    const htmlText = await res.text();
+
+    // Extract title from <h1 id="firstHeading"> or <title>
+    const titleMatch = htmlText.match(/<h1[^>]*id=["']firstHeading["'][^>]*>([\s\S]*?)<\/h1>/i) || htmlText.match(/<title>([\s\S]*?)<\/title>/i);
+    let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : query;
+    title = title.replace(/ - 萌娘百科.*$/, "").trim();
+
+    // Extract OGP description or meta description
+    const descMatch = htmlText.match(/<meta\s+(?:property|name)=["'](?:og:description|description)["']\s+content=["']([^"']+)["']/i);
+    let extractText = descMatch ? descMatch[1].trim() : "";
+
+    // Extract OGP image
+    const imgMatch = htmlText.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i);
+    let thumbnailUrl = imgMatch ? imgMatch[1].trim() : "";
+
+    return {
+      success: true,
+      source: "moegirl",
+      query,
+      targetUrl: finalUrl,
+      title: title || query,
+      extract: extractText,
+      thumbnail: thumbnailUrl,
+      results: [{ title: title || query, url: finalUrl }]
+    };
+  } catch (err) {
+    console.error("[Background] Moegirl search error:", err);
+    return { success: false, error: "萌娘百科网络请求失败，请检查网络连接", targetUrl, source: "moegirl" };
+  }
+}
+
+/**
+ * Fetch article HTML & OGP from ピクシブ百科事典 (Pixiv Dic)
+ */
+async function fetchPixivDic(query) {
+  const directUrl = `https://dic.pixiv.net/a/${encodeURIComponent(query)}`;
+  const searchUrl = `https://dic.pixiv.net/search?query=${encodeURIComponent(query)}`;
+  const headers = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,zh-CN,zh;q=0.9,en;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  };
+
+  try {
+    let res = await fetch(directUrl, { headers });
+    let finalUrl = directUrl;
+
+    if (!res.ok) {
+      finalUrl = searchUrl;
+      res = await fetch(searchUrl, { headers });
+    }
+
+    if (!res.ok) {
+      return { success: false, error: `Pixiv百科 请求失败 (HTTP ${res.status})`, targetUrl: searchUrl, source: "pixiv" };
+    }
+
+    const htmlText = await res.text();
+    finalUrl = res.url || finalUrl;
+
+    // Extract OGP title
+    const titleMatch = htmlText.match(/<meta\s+(?:property|name)=["']og:title["']\s+content=["']([^"']+)["']/i) || htmlText.match(/<title>([\s\S]*?)<\/title>/i);
+    let title = titleMatch ? titleMatch[1].replace(/ - 【ピクシブ百科事典】.*$/, "").trim() : query;
+
+    // Extract OGP description
+    const descMatch = htmlText.match(/<meta\s+(?:property|name)=["'](?:og:description|description)["']\s+content=["']([^"']+)["']/i);
+    let description = descMatch ? descMatch[1].trim() : "";
+
+    // Extract OGP image
+    const imgMatch = htmlText.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i);
+    let imageUrl = imgMatch ? imgMatch[1].replace(/&amp;/g, "&").trim() : "";
+
+    return {
+      success: true,
+      source: "pixiv",
+      html: htmlText,
+      query,
+      targetUrl: finalUrl,
+      title: title || query,
+      extract: description,
+      thumbnail: imageUrl
+    };
+  } catch (err) {
+    console.error("[Background] Fetch Pixiv Dic error:", err);
+    return { success: false, error: "Pixiv百科网络请求失败，请检查网络连接", targetUrl: searchUrl, source: "pixiv" };
   }
 }
 

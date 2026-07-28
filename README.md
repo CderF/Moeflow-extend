@@ -19,11 +19,12 @@
   - **当前项目实时感知**：在网页具体项目区，悬浮挂件自动读取当前项目的实时进度，并支持生成专属项目简报。
   - **双 100% 完成规则**：仅在翻译进度与校对进度**同时达到 100%** 时判定为已完成 (Finished)。
 
-- ❖ **内置日语辞書与符号工具**
+- ❖ **内置日语辞書、梗百科与符号工具**
   - **MOJi 辞書 (日中/中日)**：查词自动获取假名、发音、声调、详细中文释义及精选双语例句。
   - **Weblio 国語 (日日)**：原生解析 Weblio 词条内容，提供权威日日释义与直接跳转入口。
+  - **梗百科 (萌娘百科 / Pixiv百科)**：内置 **萌娘百科 (Moegirl Wiki)** 与 **ピクシブ百科事典 (Pixiv Dic)** 双源梗百科，自动解析词条导言/摘要与首图，支持选中文本一键快捷查询。
   - **日文符号快捷面板 (`mt-action-jsym`)**：预置日文括号（`「」` `『』` `【】`）、标点（`・` `…` `〜`）与特殊标记，点击自动在当前输入框光标处插入符号并保持选区与焦点（兼容 React / Vue 数据绑定模型）。
-  - **可拖拽独立窗口**：词典与符号面板均可拖拽并自动记忆持久化位置 (`mt-jdict-pos` / `mt-jsym-pos`)。
+  - **可拖拽独立窗口**：词典、梗百科与符号面板均可拖拽并自动记忆持久化位置 (`mt-jdict-pos` / `mt-mwiki-pos` / `mt-jsym-pos`)。
 
 - ❖ **防闪烁主题与极简 UI**
   - **三档主题控制**：支持 **跟随系统 (System)**、**强制深色 (Dark)** 和 **强制浅色 (Light)**。
@@ -57,6 +58,17 @@
 | :---: |
 | ![日语辞書界面](img/screenshots/dictionary.png) |
 | *假名、发音、例句与权威日日释义* |
+
+</details>
+
+<details open>
+<summary><b>▸ 内置梗百科 (萌娘百科 + Pixiv百科)</b></summary>
+<br>
+
+| 梗百科弹窗 (萌娘百科 / Pixiv百科) |
+| :---: |
+| ![梗百科界面](img/screenshots/mwiki.png) |
+| *解析网络梗/ACG词条导言、图文摘要与外链，支持选中文本一键快捷查询* |
 
 </details>
 
@@ -114,9 +126,9 @@
 ```text
 Moeflow-extend/
 ├── manifest.json             # Chrome Extension Manifest V3 配置文件
-├── background.js             # Service Worker 后台服务 (统计刷新、API 中转与字典请求)
-├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、符号面板、单项目统计)
-├── content.css               # 悬浮挂件、词典窗口、符号面板与 Modal 样式 (iOS Dynamic Island 风格)
+├── background.js             # Service Worker 后台服务 (统计刷新、API 中转、辞書/梗百科代理)
+├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、梗百科、符号面板)
+├── content.css               # 悬浮挂件、词典/梗百科窗口、符号面板与 Modal 样式 (iOS Dynamic Island 风格)
 ├── popup.html                # 扩展 Popup 视图 HTML
 ├── popup.js                  # 扩展 Popup 逻辑 (数据渲染与诊断测试)
 ├── popup.css                 # 扩展 Popup 样式 (Apple SF 风格 Design Tokens)
@@ -130,9 +142,11 @@ Moeflow-extend/
 ├── img/
 │   ├── cotton.png            # 插件主图标 (棉花)
 │   ├── icon.png              # 默认浅色图标
-│   └── icon-white.png        # 默认深色图标
+│   ├── icon-white.png        # 默认深色图标
+│   └── screenshots/          # 功能演示截图与 GIF 目录
 ├── tests/
-│   └── theme.spec.mjs        # Playwright E2E 自动化测试
+│   ├── theme.spec.mjs        # 主题与挂件 Playwright E2E 自动化测试
+│   └── mwiki.spec.mjs        # 梗百科弹窗 Playwright E2E 自动化测试
 ├── AGENTS.md                 # AI Agent 开发指南与架构规范
 └── README.md                 # 项目说明文档
 ```
@@ -148,10 +162,12 @@ Moeflow-extend/
   - `GET /v1/teams/{teamId}/members`: 种植园汉化组成员角色解析
   - `MOJi 辞書 API`: `https://api.mojidict.com/app/mojidict/api/v2/search/all` & `v1/word/detailInfo`
   - `Weblio API`: `https://www.weblio.jp/content/` (Service Worker 后台代理请求并清洗)
+  - `萌娘百科 (Moegirl Wiki)`: `https://zh.moegirl.org.cn/index.php?search=` (Service Worker 提取导言/摘要/首图)
+  - `Pixiv 百科事典 (Pixiv Dic)`: `https://dic.pixiv.net/a/` & `https://dic.pixiv.net/search` (原生解析释义与 OGP 插图)
 - **网络规则 (declarativeNetRequest)**:
   - 通过 `rules.json` 给 `*m-t.pics*` 与 `*moetran.com/avatars*` 补充 Referer 与 Origin 请求头，消除 403 跨域阻断。
 - **自动化测试**:
-  - 执行 `npx playwright test tests/theme.spec.mjs` 运行 E2E 主题与挂件测试。
+  - 执行 `npx playwright test tests/theme.spec.mjs tests/mwiki.spec.mjs` 运行 E2E 自动化测试。
 
 ---
 
@@ -159,3 +175,4 @@ Moeflow-extend/
 
 - **隐私政策**：详见 [Privacy Policy.md](Privacy%20Policy.md)。扩展仅在本地读取必须的登录凭证与统计接口，保护用户个人数据安全。
 - **开源许可证**：本项目采用 [MIT License](LICENSE) 许可证。
+

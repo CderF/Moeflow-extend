@@ -28,7 +28,9 @@
     "https://*.m-t.pics/*",
     "https://c01.m-t.pics/*",
     "https://*.weblio.jp/*",
-    "https://*.mojidict.com/*"
+    "https://*.mojidict.com/*",
+    "https://*.moegirl.org.cn/*",
+    "https://*.pixiv.net/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https: data: blob:;"
