@@ -6,6 +6,12 @@
 const DEFAULT_APP_TOKEN = "F91nbenvPalOnnsHG2ocevX5nff";
 const DEFAULT_TABLE_ID = "tblRiggk5q2y319A";
 
+// In-memory cache for the shared sync context (token + field schema + record snapshot)
+// Cleared whenever Feishu credentials are updated via saveFeishuConfig().
+let _syncCtxCache = null;
+let _syncCtxCacheAt = 0;
+const SYNC_CTX_TTL = 60_000; // 60 seconds
+
 /**
  * Read Feishu credentials & target table settings from chrome.storage.local
  */
@@ -33,8 +39,10 @@ export async function getFeishuConfig() {
 export async function saveFeishuConfig(config) {
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
     await chrome.storage.local.set({ feishuConfig: config });
-    // Invalidate cached token on credential change
+    // Invalidate cached token AND in-memory sync context on credential change
     await chrome.storage.local.remove("feishuTenantToken");
+    _syncCtxCache = null;
+    _syncCtxCacheAt = 0;
   }
 }
 
@@ -282,6 +290,21 @@ export async function createFeishuSyncContext() {
 }
 
 /**
+ * Cached variant of createFeishuSyncContext().
+ * Reuses the in-memory context for up to 60 seconds to avoid re-fetching
+ * the token, field schema, and full record snapshot on every sync run.
+ * Automatically invalidated when saveFeishuConfig() is called.
+ */
+export async function getOrCreateFeishuSyncContext() {
+  if (_syncCtxCache && Date.now() - _syncCtxCacheAt < SYNC_CTX_TTL) {
+    return _syncCtxCache;
+  }
+  _syncCtxCache = await createFeishuSyncContext();
+  _syncCtxCacheAt = Date.now();
+  return _syncCtxCache;
+}
+
+/**
  * Query existing records in Bitable to find row by manga name or locate an unused empty row
  */
 export async function findRecordTarget(token, appToken, tableId, mangaName) {
@@ -484,4 +507,115 @@ export async function syncMangaToFeishu(rowData, ctx = null) {
     }
     return { action: "created", recordId: newRecordId, mangaName: rowData.mangaName };
   }
+}
+
+/**
+ * Batch upsert all manga rows into Feishu Bitable in at most 2 HTTP requests
+ * (one batch_update for existing/empty rows, one batch_create for brand-new rows).
+ *
+ * @param {Array}  rows - Manga row objects produced by buildFeishuRowsFromProjects()
+ * @param {Object} ctx  - Shared sync context from getOrCreateFeishuSyncContext()
+ * @returns {{ successCount: number, firstErrorMsg: string, results: Array }}
+ */
+export async function batchUpsertMangasToFeishu(rows, ctx) {
+  if (!rows || rows.length === 0) {
+    return { successCount: 0, firstErrorMsg: "", results: [] };
+  }
+
+  const { token, appToken, tableId, actualFields } = ctx;
+
+  // Partition rows into those with an existing record and those that need creation
+  const toUpdate = []; // { record_id, fields, mangaName }
+  const toCreate = []; // { fields, mangaName }
+
+  for (const row of rows) {
+    if (!row || !row.mangaName) continue;
+    const fieldsPayload = buildSmartFieldsPayload(row, actualFields);
+    const cleanTarget = row.mangaName.trim().toLowerCase();
+    const matchRecordId = ctx.byMangaName.get(cleanTarget) || null;
+
+    if (matchRecordId) {
+      toUpdate.push({ record_id: matchRecordId, fields: fieldsPayload, mangaName: row.mangaName });
+    } else {
+      // Consume a pre-allocated empty row when available
+      const emptyRecordId = ctx.emptyQueue.length > 0 ? ctx.emptyQueue.shift() : null;
+      if (emptyRecordId) {
+        ctx.byMangaName.set(cleanTarget, emptyRecordId);
+        toUpdate.push({ record_id: emptyRecordId, fields: fieldsPayload, mangaName: row.mangaName });
+      } else {
+        toCreate.push({ fields: fieldsPayload, mangaName: row.mangaName });
+      }
+    }
+  }
+
+  const results = [];
+  let successCount = 0;
+  let firstErrorMsg = "";
+
+  // ── Batch update (existing rows + empty-row rewrites) ──────────────────────
+  if (toUpdate.length > 0) {
+    try {
+      const updateUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/batch_update`;
+      const res = await fetch(updateUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        body: JSON.stringify({
+          records: toUpdate.map(r => ({ record_id: r.record_id, fields: r.fields }))
+        })
+      });
+      const resJson = await res.json();
+      if (resJson.code !== 0) {
+        const errMsg = `飞书批量更新失败 (错误码 ${resJson.code}): ${resJson.msg || "未知错误"}`;
+        if (!firstErrorMsg) firstErrorMsg = errMsg;
+        for (const r of toUpdate) results.push({ success: false, mangaName: r.mangaName, error: errMsg });
+      } else {
+        successCount += toUpdate.length;
+        for (const r of toUpdate) {
+          results.push({ action: "updated", success: true, recordId: r.record_id, mangaName: r.mangaName });
+        }
+      }
+    } catch (e) {
+      if (!firstErrorMsg) firstErrorMsg = e.message;
+      for (const r of toUpdate) results.push({ success: false, mangaName: r.mangaName, error: e.message });
+    }
+  }
+
+  // ── Batch create (brand-new rows) ──────────────────────────────────────────
+  if (toCreate.length > 0) {
+    try {
+      const createUrl = `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/batch_create`;
+      const res = await fetch(createUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        body: JSON.stringify({
+          records: toCreate.map(r => ({ fields: r.fields }))
+        })
+      });
+      const resJson = await res.json();
+      if (resJson.code !== 0) {
+        const errMsg = `飞书批量新建失败 (错误码 ${resJson.code}): ${resJson.msg || "未知错误"}`;
+        if (!firstErrorMsg) firstErrorMsg = errMsg;
+        for (const r of toCreate) results.push({ success: false, mangaName: r.mangaName, error: errMsg });
+      } else {
+        const createdRecords = resJson.data?.records || [];
+        successCount += toCreate.length;
+        toCreate.forEach((r, i) => {
+          const newRecordId = createdRecords[i]?.record_id;
+          if (newRecordId) ctx.byMangaName.set(r.mangaName.trim().toLowerCase(), newRecordId);
+          results.push({ action: "created", success: true, recordId: newRecordId, mangaName: r.mangaName });
+        });
+      }
+    } catch (e) {
+      if (!firstErrorMsg) firstErrorMsg = e.message;
+      for (const r of toCreate) results.push({ success: false, mangaName: r.mangaName, error: e.message });
+    }
+  }
+
+  return { successCount, firstErrorMsg, results };
 }

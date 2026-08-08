@@ -35,6 +35,13 @@
   - **一键工作简报**：自动生成符合团队规范的 Markdown 简报（全量统计/当前项目统计）并写入剪贴板。
   - **头像防盗链修正**：基于 MV3 `declarativeNetRequest` 自动修饰 Header，解决 `m-t.pics` 图片 403 跨域问题。
 
+- ❖ **飞书表格同步 (Feishu Bitable Sync)**
+  - **快速更新进度**：一键将最近参与的 10 个漫画进度同步到飞书多维表格，自动识别「漫画名 → 最新话数 / 当前进行话数 / 状态 / 图源 / 参与人员」。
+  - **全量初始导入**：支持一次性导入种植园汉化组全部项目，并自动创建缺失字段。
+  - **单项目同步**：在网页内浏览具体项目时，可将该漫画的最新进度实时同步到飞书。
+  - **话数选取引擎**：根据平台项目状态（进行中 / 已完结 / 计划删除）与话数（繁体数字字符全角常规化、带后缀变体、纯文字话名如番外篇等）自动识别「最新话 / 当前进行话」。
+  - **性能优化**：成员信息并行拉取、飞书全量记录与 Token 短期缓存、Bitable `batch_update` / `batch_create` 批量写入，「更新进度」从分钟级降至 **10 秒内**。
+
 ---
 
 ## ✦ 界面展示 (Screenshots)
@@ -126,8 +133,8 @@
 ```text
 Moeflow-extend/
 ├── manifest.json             # Chrome Extension Manifest V3 配置文件
-├── background.js             # Service Worker 后台服务 (统计刷新、API 中转、辞書/梗百科代理)
-├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、梗百科、符号面板)
+├── background.js             # Service Worker 后台服务 (统计刷新、API 中转、辞書/梗百科代理与飞书同步调度)
+├── content.js                # 网页 Content Script (悬浮胶囊挂件、词典弹窗、梗百科、符号面板、单项目统计)
 ├── content.css               # 悬浮挂件、词典/梗百科窗口、符号面板与 Modal 样式 (iOS Dynamic Island 风格)
 ├── popup.html                # 扩展 Popup 视图 HTML
 ├── popup.js                  # 扩展 Popup 逻辑 (数据渲染与诊断测试)
@@ -138,7 +145,8 @@ Moeflow-extend/
 ├── rules.json                # declarativeNetRequest 头像 Referer 修改规则
 ├── Privacy Policy.md         # 扩展隐私政策文档
 ├── utils/
-│   └── moetranApi.js         # REST API 服务模块 (Token 提取、多页分页与统计计算引擎)
+│   ├── moetranApi.js         # REST API 服务模块 (Token 提取、多页分页、统计计算与飞书行构建引擎)
+│   └── feishuSync.js         # 飞书 Bitable 同步模块 (Token/记录快照缓存、批量写入、字段自动创建)
 ├── img/
 │   ├── cotton.png            # 插件主图标 (棉花)
 │   ├── icon.png              # 默认浅色图标
@@ -146,7 +154,8 @@ Moeflow-extend/
 │   └── screenshots/          # 功能演示截图与 GIF 目录
 ├── tests/
 │   ├── theme.spec.mjs        # 主题与挂件 Playwright E2E 自动化测试
-│   └── mwiki.spec.mjs        # 梗百科弹窗 Playwright E2E 自动化测试
+│   ├── mwiki.spec.mjs        # 梗百科弹窗 Playwright E2E 自动化测试
+│   └── feishu-rows-check.mjs # 飞书行构建业务逻辑单元测试 (14 项)
 ├── AGENTS.md                 # AI Agent 开发指南与架构规范
 └── README.md                 # 项目说明文档
 ```
@@ -156,18 +165,27 @@ Moeflow-extend/
 ## ✦ 技术细节与 API (Technical Specifications)
 
 - **Manifest**: Chrome Extension Manifest V3 (`"type": "module"`)
-- **API 交互接口**:
+- **API 交互接口 (Moetran)**:
   - `GET /v1/user/info`: 用户信息与团队身份
-  - `GET /v1/user/projects`: 分页获取参与项目列表 (`X-PAGINATION-COUNT`)
-  - `GET /v1/teams/{teamId}/members`: 种植园汉化组成员角色解析
+  - `GET /v1/user/projects?page=1&limit=100`: 全量分页项目列表 (`X-PAGINATION-COUNT`)
+  - `GET /v1/user/projects?page=1&limit=20`: 轻量版第一页，供快速同步场景使用
+  - `GET /v1/teams/{teamId}/projects`: 种植园全量项目列表（30 秒内存缓存）
+  - `GET /v1/projects/{id}/users`: 项目成员列表（图源 / 参与人员），并行批量拉取
   - `MOJi 辞書 API`: `https://api.mojidict.com/app/mojidict/api/v2/search/all` & `v1/word/detailInfo`
   - `Weblio API`: `https://www.weblio.jp/content/` (Service Worker 后台代理请求并清洗)
   - `萌娘百科 (Moegirl Wiki)`: `https://zh.moegirl.org.cn/index.php?search=` (Service Worker 提取导言/摘要/首图)
   - `Pixiv 百科事典 (Pixiv Dic)`: `https://dic.pixiv.net/a/` & `https://dic.pixiv.net/search` (原生解析释义与 OGP 插图)
+- **飞书 Bitable API**:
+  - `POST /open-apis/auth/v3/tenant_access_token/internal`: 获取应用凭证，自动缓存至过期前 60 秒
+  - `GET /open-apis/bitable/v1/apps/{token}/tables/{id}/fields`: 字段 Schema 校验与自动补全
+  - `GET .../records?page_size=500`: 全量记录快照（60 秒内存缓存，凭证变更时自动失效）
+  - `POST .../records/batch_update`: 批量更新已有行（至多 1 次请求处理全部漫画）
+  - `POST .../records/batch_create`: 批量新建行（至多 1 次请求）
 - **网络规则 (declarativeNetRequest)**:
   - 通过 `rules.json` 给 `*m-t.pics*` 与 `*moetran.com/avatars*` 补充 Referer 与 Origin 请求头，消除 403 跨域阻断。
 - **自动化测试**:
-  - 执行 `npx playwright test tests/theme.spec.mjs tests/mwiki.spec.mjs` 运行 E2E 自动化测试。
+  - `node tests/feishu-rows-check.mjs`: 飞书行构建业务逻辑单元测试（14 项，含话数选取、状态判定、批量字段适配）
+  - `npx playwright test tests/theme.spec.mjs tests/mwiki.spec.mjs`: E2E 主题、挂件与梗百科测试
 
 ---
 

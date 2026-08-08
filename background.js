@@ -3,8 +3,8 @@
  * Handles background statistics sync, message handling, and token management.
  */
 
-import { getUserInfo, getUserProjects, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
-import { syncMangaToFeishu, saveFeishuConfig, getFeishuConfig, createFeishuSyncContext } from "./utils/feishuSync.js";
+import { getUserInfo, getUserProjects, getUserProjectsFirstPage, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
+import { saveFeishuConfig, getFeishuConfig, getOrCreateFeishuSyncContext, batchUpsertMangasToFeishu } from "./utils/feishuSync.js";
 
 async function injectContentScriptToAllTabs() {
   try {
@@ -98,6 +98,21 @@ function enqueueFeishuSync(task) {
   return run;
 }
 
+// 30-second in-memory cache for team projects list.
+// Invalidated automatically when the service worker restarts or the TTL expires.
+let _teamProjCache = null;
+let _teamProjCacheAt = 0;
+const TEAM_PROJ_TTL = 30_000;
+
+async function getCachedTeamProjects() {
+  if (_teamProjCache && Date.now() - _teamProjCacheAt < TEAM_PROJ_TTL) {
+    return _teamProjCache;
+  }
+  _teamProjCache = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+  _teamProjCacheAt = Date.now();
+  return _teamProjCache;
+}
+
 /**
  * Fail fast when Feishu credentials are missing, before any expensive Moetran fetching
  */
@@ -110,47 +125,40 @@ async function assertFeishuConfigured() {
 
 /**
  * Build Feishu rows from team projects, then enrich each row with the
- * creator (图源) & participants of its current-in-progress chapter project
+ * creator (图源) & participants of its current-in-progress chapter project.
+ * Member fetches run in parallel to minimise wall-clock time.
  */
 async function buildRowsWithMembers(projects) {
   const initialRows = buildFeishuRowsFromProjects(projects);
   const targetIds = [...new Set(initialRows.map(r => r.targetProjectId).filter(Boolean))];
 
+  // Fetch all project members concurrently instead of serially
+  const entries = await Promise.all(
+    targetIds.map(async pid => {
+      try {
+        const members = await getProjectMembers(pid);
+        return [pid, members];
+      } catch (e) {
+        console.warn(`[Background] Fetch members for project ${pid} failed:`, e);
+        return [pid, null];
+      }
+    })
+  );
   const membersMap = {};
-  for (const pid of targetIds) {
-    try {
-      const members = await getProjectMembers(pid);
-      if (members) membersMap[pid] = members;
-    } catch (e) {
-      console.warn(`[Background] Fetch members for project ${pid} failed:`, e);
-    }
+  for (const [pid, members] of entries) {
+    if (members) membersMap[pid] = members;
   }
 
   return buildFeishuRowsFromProjects(projects, membersMap);
 }
 
 /**
- * Upsert rows into Feishu within one shared context (token + field schema + records snapshot)
+ * Batch-upsert rows into Feishu within one shared context.
+ * Uses at most 2 HTTP requests (batch_update + batch_create) regardless of row count.
  */
 async function upsertRowsToFeishu(rows) {
-  const ctx = await createFeishuSyncContext();
-  const results = [];
-  let successCount = 0;
-  let firstErrorMsg = "";
-
-  for (const row of rows) {
-    try {
-      const res = await syncMangaToFeishu(row, ctx);
-      results.push({ success: true, ...res });
-      successCount++;
-    } catch (e) {
-      console.warn(`[Background] Failed to sync manga ${row.mangaName}:`, e);
-      results.push({ success: false, mangaName: row.mangaName, error: e.message });
-      if (!firstErrorMsg) firstErrorMsg = e.message;
-    }
-  }
-
-  return { successCount, firstErrorMsg, results };
+  const ctx = await getOrCreateFeishuSyncContext();
+  return await batchUpsertMangasToFeishu(rows, ctx);
 }
 
 // Message Listener for Extension Communication
@@ -291,7 +299,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const result = await enqueueFeishuSync(async () => {
               await assertFeishuConfigured();
               // Team-wide project list is the single source of truth for Feishu rows
-              const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+              const teamProjects = await getCachedTeamProjects();
               const targetProj = teamProjects.find(p => String(p.id || p._id) === String(projectId));
               if (!targetProj) {
                 return { skipped: true };
@@ -330,16 +338,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           try {
             const result = await enqueueFeishuSync(async () => {
               await assertFeishuConfigured();
-              // My recent 10 projects only locate the target manga names;
-              // row data is always computed from the team-wide project list
-              const userProjects = await getUserProjects(1, 100);
-              const recentProjects = (Array.isArray(userProjects) ? userProjects : []).slice(0, 10);
-              const mangaNames = new Set(recentProjects.map(p => extractMangaName(p)).filter(Boolean));
+              // getUserProjectsFirstPage fetches only 1 page (no multi-page loop)
+              // which is sufficient to identify the most-recently-touched manga names.
+              const recentProjects = await getUserProjectsFirstPage(20);
+              const mangaNames = new Set(
+                (Array.isArray(recentProjects) ? recentProjects : []).slice(0, 10)
+                  .map(p => extractMangaName(p)).filter(Boolean)
+              );
               if (mangaNames.size === 0) {
                 return { error: "未找到任何待同步的项目" };
               }
 
-              const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+              const teamProjects = await getCachedTeamProjects();
               const matchedProjects = teamProjects.filter(p => mangaNames.has(extractMangaName(p)));
               if (matchedProjects.length === 0) {
                 return { error: "最近参与的项目均不在种植园汉化组，没有可同步的漫画" };
@@ -368,7 +378,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           try {
             const result = await enqueueFeishuSync(async () => {
               await assertFeishuConfigured();
-              const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+              const teamProjects = await getCachedTeamProjects();
               if (!teamProjects || teamProjects.length === 0) {
                 return { error: "未在种植园汉化组找到任何项目" };
               }

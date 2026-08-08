@@ -379,6 +379,24 @@ export async function getUserProjects(page = 1, limit = 100, word = "") {
 }
 
 /**
+ * Lightweight variant: fetch only the first page of the user's project list.
+ * Used by SYNC_RECENT_TO_FEISHU to obtain recent manga names without the
+ * full multi-page iteration cost of getUserProjects().
+ * @param {number} limit - Number of items to request (default: 20)
+ * @returns {Array} First-page project list (no pagination metadata)
+ */
+export async function getUserProjectsFirstPage(limit = 20) {
+  const { data: res } = await fetchWithAuthFull(`/v1/user/projects?page=1&limit=${limit}&word=`);
+  let list = [];
+  if (Array.isArray(res)) list = res;
+  else if (Array.isArray(res.data)) list = res.data;
+  else if (res.data && Array.isArray(res.data.list)) list = res.data.list;
+  else if (res.data && Array.isArray(res.data.projects)) list = res.data.projects;
+  else if (res.data && Array.isArray(res.data.rows)) list = res.data.rows;
+  return list.slice(0, limit);
+}
+
+/**
  * Fetch projects belonging to 种植园汉化组 team (fetches all pages for 100% accurate total count)
  * Endpoint: /v1/teams/{teamId}/projects
  */
@@ -879,11 +897,19 @@ export function buildFeishuRowsFromProjects(projectsList = [], membersMap = null
       return numeric[0];
     }
     if (numeric.length === 0) {
-      // 纯文字集合：取最近编辑时间最新者
-      return [...candidates].sort((a, b) => timeOf(b.updatedAt) - timeOf(a.updatedAt))[0];
+      // 纯文字集合：取最近编辑时间最新者；updatedAt 相同时以 createdAt 作为稳定二级键
+      return [...candidates].sort((a, b) =>
+        (timeOf(b.updatedAt) - timeOf(a.updatedAt)) ||
+        (timeOf(b.createdAt) - timeOf(a.createdAt))
+      )[0];
     }
-    // 数字文字同场：按各自新近度键比较，取最新者
-    return [...candidates].sort((a, b) => recencyOf(b) - recencyOf(a))[0];
+    // 数字文字同场：数字章节永远优先于文字章节；数字集合内再按话数 / 新近度键选取
+    numeric.sort((a, b) =>
+      (b.chapterNum - a.chapterNum) ||
+      ((b.suffixed ? 1 : 0) - (a.suffixed ? 1 : 0)) ||
+      (timeOf(b.createdAt) - timeOf(a.createdAt))
+    );
+    return numeric[0];
   };
 
   const resultRows = [];
