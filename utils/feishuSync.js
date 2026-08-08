@@ -178,25 +178,117 @@ export async function ensureRequiredFieldsExist(token, appToken, tableId) {
 }
 
 /**
+ * Fetch ALL records of a Bitable table with page_token pagination (500 per page, capped at 20 pages)
+ */
+export async function listAllRecords(token, appToken, tableId, maxPages = 20) {
+  const allItems = [];
+  let pageToken = "";
+
+  for (let page = 0; page < maxPages; page++) {
+    const url = new URL(`https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records`);
+    url.searchParams.set("page_size", "500");
+    if (pageToken) url.searchParams.set("page_token", pageToken);
+
+    try {
+      const res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) break;
+      const data = await res.json();
+      if (data.code !== 0 || !data.data) break;
+
+      const items = Array.isArray(data.data.items) ? data.data.items : [];
+      allItems.push(...items);
+
+      if (data.data.has_more && data.data.page_token) {
+        pageToken = data.data.page_token;
+      } else {
+        break;
+      }
+    } catch (e) {
+      console.warn("[FeishuSync] List records pagination warning:", e);
+      break;
+    }
+  }
+
+  return allItems;
+}
+
+/**
+ * Extract the manga-name cell value from a record's fields.
+ * Prefers exact 漫画名/名称 columns, then any column containing 漫画, then 项目
+ */
+function extractRecordMangaName(fields) {
+  const entries = Object.entries(fields || {});
+  const scoreOf = (key) => {
+    if (key === "漫画名" || key === "名称") return 0;
+    if (key.includes("漫画")) return 1;
+    if (key.includes("项目")) return 2;
+    return 3;
+  };
+
+  const candidates = entries
+    .filter(([key]) => scoreOf(key) < 3)
+    .sort((a, b) => scoreOf(a[0]) - scoreOf(b[0]));
+
+  for (const [, val] of candidates) {
+    let strVal = "";
+    if (typeof val === "string") strVal = val;
+    else if (Array.isArray(val) && val[0]) strVal = String(val[0].text || val[0]);
+    else if (val && typeof val === "object" && val.text) strVal = String(val.text);
+    if (strVal.trim()) return strVal.trim();
+  }
+  return "";
+}
+
+/**
+ * Build a shared context for one sync run: tenant token, ensured field schema,
+ * and a full snapshot of existing records indexed by manga name (+ queue of empty rows).
+ * Sharing the snapshot across rows avoids re-fetching schema/records per manga,
+ * and in-run bookkeeping prevents empty-row collisions and duplicate inserts.
+ */
+export async function createFeishuSyncContext() {
+  const token = await getFeishuTenantToken();
+  const config = await getFeishuConfig();
+  const { appToken, tableId } = config;
+
+  if (!appToken || !tableId) {
+    throw new Error("缺少 app_token 或 table_id，请检查设置");
+  }
+
+  const actualFields = await ensureRequiredFieldsExist(token, appToken, tableId);
+  const records = await listAllRecords(token, appToken, tableId);
+
+  const byMangaName = new Map();
+  const emptyQueue = [];
+
+  for (const item of records) {
+    const fields = item.fields || {};
+    if (Object.keys(fields).length === 0) {
+      emptyQueue.push(item.record_id);
+      continue;
+    }
+    const nameVal = extractRecordMangaName(fields);
+    if (nameVal) {
+      const clean = nameVal.trim().toLowerCase();
+      if (clean && !byMangaName.has(clean)) {
+        byMangaName.set(clean, item.record_id);
+      }
+    }
+  }
+
+  return { token, appToken, tableId, actualFields, byMangaName, emptyQueue };
+}
+
+/**
  * Query existing records in Bitable to find row by manga name or locate an unused empty row
  */
 export async function findRecordTarget(token, appToken, tableId, mangaName) {
   if (!mangaName) return { matchRecordId: null, emptyRecordId: null };
 
   try {
-    const url = `https://open.feishu.cn/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records?page_size=500`;
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
-
-    if (!res.ok) return { matchRecordId: null, emptyRecordId: null };
-    const data = await res.json();
-    if (data.code !== 0 || !data.data || !Array.isArray(data.data.items)) return { matchRecordId: null, emptyRecordId: null };
-
-    const items = data.data.items;
+    const items = await listAllRecords(token, appToken, tableId);
     const cleanTarget = mangaName.trim().toLowerCase();
 
     let matchRecordId = null;
@@ -204,26 +296,17 @@ export async function findRecordTarget(token, appToken, tableId, mangaName) {
 
     for (const item of items) {
       const fields = item.fields || {};
-      const keys = Object.keys(fields);
 
-      if (keys.length === 0 && !emptyRecordId) {
-        emptyRecordId = item.record_id;
+      if (Object.keys(fields).length === 0) {
+        if (!emptyRecordId) emptyRecordId = item.record_id;
+        continue;
       }
 
-      for (const [key, val] of Object.entries(fields)) {
-        if (key.includes("漫画") || key.includes("项目") || key === "漫画名" || key === "名称") {
-          let strVal = "";
-          if (typeof val === "string") strVal = val;
-          else if (Array.isArray(val) && val[0]) strVal = String(val[0].text || val[0]);
-          else if (val && typeof val === "object" && val.text) strVal = String(val.text);
-
-          if (strVal.trim().toLowerCase() === cleanTarget) {
-            matchRecordId = item.record_id;
-            break;
-          }
-        }
+      const nameVal = extractRecordMangaName(fields);
+      if (nameVal && nameVal.trim().toLowerCase() === cleanTarget) {
+        matchRecordId = item.record_id;
+        break;
       }
-      if (matchRecordId) break;
     }
 
     return { matchRecordId, emptyRecordId };
@@ -245,18 +328,25 @@ export async function findRecordByMangaName(token, appToken, tableId, mangaName)
  * Build dynamic Bitable fields payload matching real table schema
  */
 export function buildSmartFieldsPayload(rowData, actualFields = null) {
+  const participants = Array.isArray(rowData.participants) ? rowData.participants : [];
+  // Member columns are only written when member data was actually loaded,
+  // so a failed member fetch never blanks out existing 图源/参与人员 values
+  const includeMembers = rowData.membersLoaded !== false;
+
   const defaultPayload = {
     "漫画名": String(rowData.mangaName || "").trim(),
     "最新话数": Number(rowData.latestChapter) || 0,
     "当前进行话数": Number(rowData.currentChapter) || 0,
     "状态": String(rowData.status || "待翻译"),
-    "图源": String(rowData.creator || ""),
-    "参与人员 1": String(rowData.participants[0] || ""),
-    "参与人员 2": String(rowData.participants[1] || ""),
-    "参与人员 3": String(rowData.participants[2] || ""),
-    "参与人员 4": String(rowData.participants[3] || ""),
     "最后编辑日期": new Date(rowData.lastEditDate || Date.now()).getTime()
   };
+  if (includeMembers) {
+    defaultPayload["图源"] = String(rowData.creator || "");
+    defaultPayload["参与人员 1"] = String(participants[0] || "");
+    defaultPayload["参与人员 2"] = String(participants[1] || "");
+    defaultPayload["参与人员 3"] = String(participants[2] || "");
+    defaultPayload["参与人员 4"] = String(participants[3] || "");
+  }
 
   if (!actualFields || !Array.isArray(actualFields) || actualFields.length === 0) {
     return defaultPayload;
@@ -280,14 +370,14 @@ export function buildSmartFieldsPayload(rowData, actualFields = null) {
   const getValueForCanonicalKey = (cKey) => {
     switch (cKey) {
       case "mangaName": return String(rowData.mangaName || "").trim();
-      case "latestChapter": return Number(rowData.latestChapter) || 0;
-      case "currentChapter": return Number(rowData.currentChapter) || 0;
+      case "latestChapter": return rowData.latestChapter ?? 0;
+      case "currentChapter": return rowData.currentChapter ?? 0;
       case "status": return String(rowData.status || "待翻译");
-      case "creator": return String(rowData.creator || "");
-      case "p1": return String(rowData.participants[0] || "");
-      case "p2": return String(rowData.participants[1] || "");
-      case "p3": return String(rowData.participants[2] || "");
-      case "p4": return String(rowData.participants[3] || "");
+      case "creator": return includeMembers ? String(rowData.creator || "") : undefined;
+      case "p1": return includeMembers ? String(participants[0] || "") : undefined;
+      case "p2": return includeMembers ? String(participants[1] || "") : undefined;
+      case "p3": return includeMembers ? String(participants[2] || "") : undefined;
+      case "p4": return includeMembers ? String(participants[3] || "") : undefined;
       case "date": {
         const d = new Date(rowData.lastEditDate || Date.now());
         return isNaN(d.getTime()) ? Date.now() : d.getTime();
@@ -309,6 +399,7 @@ export function buildSmartFieldsPayload(rowData, actualFields = null) {
 
       if (isMatch) {
         let val = getValueForCanonicalKey(cGroup.key);
+        if (val === undefined) break; // members not loaded -> keep the existing cell value untouched
         if (ftype === 2) {
           val = Number(val) || 0;
         } else if (ftype === 5) {
@@ -331,26 +422,22 @@ export function buildSmartFieldsPayload(rowData, actualFields = null) {
 /**
  * Upsert a single manga status row to Feishu Bitable
  * @param {Object} rowData - Formatted row data object
+ * @param {Object|null} ctx - Shared context from createFeishuSyncContext(); built on demand when omitted
  */
-export async function syncMangaToFeishu(rowData) {
+export async function syncMangaToFeishu(rowData, ctx = null) {
   if (!rowData || !rowData.mangaName) {
     throw new Error("缺少有效的漫画数据，无法同步到飞书");
   }
 
-  const token = await getFeishuTenantToken();
-  const config = await getFeishuConfig();
-  const { appToken, tableId } = config;
+  const context = ctx || await createFeishuSyncContext();
+  const { token, appToken, tableId, actualFields } = context;
 
-  if (!appToken || !tableId) {
-    throw new Error("缺少 app_token 或 table_id，请检查设置");
-  }
-
-  // Ensure missing standard columns are automatically created first
-  const actualFields = await ensureRequiredFieldsExist(token, appToken, tableId);
   const fieldsPayload = buildSmartFieldsPayload(rowData, actualFields);
 
-  // Search for matching row or unused empty row
-  const { matchRecordId, emptyRecordId } = await findRecordTarget(token, appToken, tableId, rowData.mangaName);
+  // Match by manga name first, otherwise reuse a pre-allocated empty row
+  const cleanTarget = rowData.mangaName.trim().toLowerCase();
+  const matchRecordId = context.byMangaName.get(cleanTarget) || null;
+  const emptyRecordId = (!matchRecordId && context.emptyQueue.length > 0) ? context.emptyQueue[0] : null;
   const targetRecordId = matchRecordId || emptyRecordId;
 
   if (targetRecordId) {
@@ -369,6 +456,11 @@ export async function syncMangaToFeishu(rowData) {
     if (resJson.code !== 0) {
       throw new Error(`飞书更新记录失败 (错误码 ${resJson.code}): ${resJson.msg || "未知错误"}`);
     }
+    // Register the write so later rows in the same run never reuse this row
+    if (!matchRecordId) {
+      context.emptyQueue.shift();
+      context.byMangaName.set(cleanTarget, targetRecordId);
+    }
     return { action: "updated", recordId: targetRecordId, mangaName: rowData.mangaName };
   } else {
     // Insert new row if no empty rows left
@@ -386,6 +478,10 @@ export async function syncMangaToFeishu(rowData) {
     if (resJson.code !== 0) {
       throw new Error(`飞书新增记录失败 (错误码 ${resJson.code}): ${resJson.msg || "未知错误"}`);
     }
-    return { action: "created", recordId: resJson.data?.record?.record_id, mangaName: rowData.mangaName };
+    const newRecordId = resJson.data?.record?.record_id;
+    if (newRecordId) {
+      context.byMangaName.set(cleanTarget, newRecordId);
+    }
+    return { action: "created", recordId: newRecordId, mangaName: rowData.mangaName };
   }
 }

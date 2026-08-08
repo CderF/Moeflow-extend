@@ -3,8 +3,8 @@
  * Handles background statistics sync, message handling, and token management.
  */
 
-import { getUserInfo, getUserProjects, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
-import { syncMangaToFeishu, saveFeishuConfig, getFeishuConfig } from "./utils/feishuSync.js";
+import { getUserInfo, getUserProjects, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
+import { syncMangaToFeishu, saveFeishuConfig, getFeishuConfig, createFeishuSyncContext } from "./utils/feishuSync.js";
 
 async function injectContentScriptToAllTabs() {
   try {
@@ -88,6 +88,69 @@ async function refreshUserStats() {
     const stored = await chrome.storage.local.get(["workStats", "userProfile"]);
     return { success: false, error: error.message, stats: stored.workStats || null, userProfile: stored.userProfile || null };
   }
+}
+
+// Serialize all Feishu sync runs to prevent concurrent empty-row collisions / duplicate inserts
+let feishuSyncQueue = Promise.resolve();
+function enqueueFeishuSync(task) {
+  const run = feishuSyncQueue.then(task, task);
+  feishuSyncQueue = run.catch(() => {});
+  return run;
+}
+
+/**
+ * Fail fast when Feishu credentials are missing, before any expensive Moetran fetching
+ */
+async function assertFeishuConfigured() {
+  const cfg = await getFeishuConfig();
+  if (!cfg.appId || !cfg.appSecret) {
+    throw new Error("未配置飞书 App ID 和 App Secret，请先在插件 Popup 的飞书配置中保存凭证");
+  }
+}
+
+/**
+ * Build Feishu rows from team projects, then enrich each row with the
+ * creator (图源) & participants of its current-in-progress chapter project
+ */
+async function buildRowsWithMembers(projects) {
+  const initialRows = buildFeishuRowsFromProjects(projects);
+  const targetIds = [...new Set(initialRows.map(r => r.targetProjectId).filter(Boolean))];
+
+  const membersMap = {};
+  for (const pid of targetIds) {
+    try {
+      const members = await getProjectMembers(pid);
+      if (members) membersMap[pid] = members;
+    } catch (e) {
+      console.warn(`[Background] Fetch members for project ${pid} failed:`, e);
+    }
+  }
+
+  return buildFeishuRowsFromProjects(projects, membersMap);
+}
+
+/**
+ * Upsert rows into Feishu within one shared context (token + field schema + records snapshot)
+ */
+async function upsertRowsToFeishu(rows) {
+  const ctx = await createFeishuSyncContext();
+  const results = [];
+  let successCount = 0;
+  let firstErrorMsg = "";
+
+  for (const row of rows) {
+    try {
+      const res = await syncMangaToFeishu(row, ctx);
+      results.push({ success: true, ...res });
+      successCount++;
+    } catch (e) {
+      console.warn(`[Background] Failed to sync manga ${row.mangaName}:`, e);
+      results.push({ success: false, mangaName: row.mangaName, error: e.message });
+      if (!firstErrorMsg) firstErrorMsg = e.message;
+    }
+  }
+
+  return { successCount, firstErrorMsg, results };
 }
 
 // Message Listener for Extension Communication
@@ -225,22 +288,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             break;
           }
           try {
-            const allProjects = await getUserProjects(1, 100);
-            const targetProj = allProjects.find(p => String(p.id || p._id) === String(projectId));
-            if (!targetProj) {
-              sendResponse({ success: false, error: "未找到指定的项目" });
-              break;
-            }
+            const result = await enqueueFeishuSync(async () => {
+              await assertFeishuConfigured();
+              // Team-wide project list is the single source of truth for Feishu rows
+              const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+              const targetProj = teamProjects.find(p => String(p.id || p._id) === String(projectId));
+              if (!targetProj) {
+                return { skipped: true };
+              }
 
-            const mangaName = extractMangaName(targetProj);
-            const mangaProjects = allProjects.filter(p => extractMangaName(p) === mangaName);
-            const rows = buildFeishuRowsFromProjects(mangaProjects);
+              const mangaName = extractMangaName(targetProj);
+              const mangaProjects = teamProjects.filter(p => extractMangaName(p) === mangaName);
+              const rows = await buildRowsWithMembers(mangaProjects);
 
-            if (rows.length > 0) {
-              const res = await syncMangaToFeishu(rows[0]);
-              sendResponse({ success: true, result: res });
+              if (rows.length === 0) {
+                return { error: "构建飞书行数据失败" };
+              }
+
+              const { successCount, firstErrorMsg, results } = await upsertRowsToFeishu(rows);
+              if (successCount > 0) {
+                return { result: results.find(r => r.success) || results[0] };
+              }
+              return { error: firstErrorMsg || "同步失败，无法写入飞书表格" };
+            });
+
+            if (result.skipped) {
+              sendResponse({ success: true, skipped: true, message: "该项目不属于种植园汉化组，已跳过飞书同步" });
+            } else if (result.result) {
+              sendResponse({ success: true, result: result.result });
             } else {
-              sendResponse({ success: false, error: "构建飞书行数据失败" });
+              sendResponse({ success: false, error: result.error || "同步失败" });
             }
           } catch (syncErr) {
             console.warn("[Background] Sync single project to Feishu failed:", syncErr);
@@ -251,35 +328,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case "SYNC_RECENT_TO_FEISHU": {
           try {
-            const projects = await getUserProjects(1, 100);
-            const recentProjects = projects.slice(0, 10);
-            const rows = buildFeishuRowsFromProjects(recentProjects);
-
-            if (!rows || rows.length === 0) {
-              sendResponse({ success: false, error: "未找到任何待同步的项目" });
-              break;
-            }
-
-            const results = [];
-            let successCount = 0;
-            let firstErrorMsg = "";
-
-            for (const row of rows) {
-              try {
-                const res = await syncMangaToFeishu(row);
-                results.push({ success: true, ...res });
-                successCount++;
-              } catch (e) {
-                console.warn(`[Background] Failed to sync manga ${row.mangaName}:`, e);
-                results.push({ success: false, mangaName: row.mangaName, error: e.message });
-                if (!firstErrorMsg) firstErrorMsg = e.message;
+            const result = await enqueueFeishuSync(async () => {
+              await assertFeishuConfigured();
+              // My recent 10 projects only locate the target manga names;
+              // row data is always computed from the team-wide project list
+              const userProjects = await getUserProjects(1, 100);
+              const recentProjects = (Array.isArray(userProjects) ? userProjects : []).slice(0, 10);
+              const mangaNames = new Set(recentProjects.map(p => extractMangaName(p)).filter(Boolean));
+              if (mangaNames.size === 0) {
+                return { error: "未找到任何待同步的项目" };
               }
-            }
 
-            if (successCount > 0) {
-              sendResponse({ success: true, syncedCount: successCount, totalCount: rows.length, results });
+              const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+              const matchedProjects = teamProjects.filter(p => mangaNames.has(extractMangaName(p)));
+              if (matchedProjects.length === 0) {
+                return { error: "最近参与的项目均不在种植园汉化组，没有可同步的漫画" };
+              }
+
+              const rows = await buildRowsWithMembers(matchedProjects);
+              if (rows.length === 0) {
+                return { error: "构建飞书行数据失败" };
+              }
+              return await upsertRowsToFeishu(rows);
+            });
+
+            if (result.successCount > 0) {
+              sendResponse({ success: true, syncedCount: result.successCount, totalCount: result.results.length, results: result.results });
             } else {
-              sendResponse({ success: false, error: firstErrorMsg || "同步失败，无法写入飞书表格", results });
+              sendResponse({ success: false, error: result.error || result.firstErrorMsg || "同步失败，无法写入飞书表格", results: result.results || [] });
             }
           } catch (syncErr) {
             console.error("[Background] Sync recent 10 projects to Feishu failed:", syncErr);
@@ -290,34 +366,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case "BULK_SYNC_PLANTATION_TO_FEISHU": {
           try {
-            const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
-            const rows = buildFeishuRowsFromProjects(teamProjects);
-
-            if (!rows || rows.length === 0) {
-              sendResponse({ success: false, error: "未在种植园汉化组找到任何项目" });
-              break;
-            }
-
-            const results = [];
-            let successCount = 0;
-            let firstErrorMsg = "";
-
-            for (const row of rows) {
-              try {
-                const res = await syncMangaToFeishu(row);
-                results.push({ success: true, ...res });
-                successCount++;
-              } catch (e) {
-                console.warn(`[Background] Failed to sync plantation manga ${row.mangaName}:`, e);
-                results.push({ success: false, mangaName: row.mangaName, error: e.message });
-                if (!firstErrorMsg) firstErrorMsg = e.message;
+            const result = await enqueueFeishuSync(async () => {
+              await assertFeishuConfigured();
+              const teamProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100);
+              if (!teamProjects || teamProjects.length === 0) {
+                return { error: "未在种植园汉化组找到任何项目" };
               }
-            }
 
-            if (successCount > 0) {
-              sendResponse({ success: true, syncedCount: successCount, totalCount: rows.length, results });
+              const rows = await buildRowsWithMembers(teamProjects);
+              if (rows.length === 0) {
+                return { error: "未在种植园汉化组找到任何项目" };
+              }
+              return await upsertRowsToFeishu(rows);
+            });
+
+            if (result.successCount > 0) {
+              sendResponse({ success: true, syncedCount: result.successCount, totalCount: result.results.length, results: result.results });
             } else {
-              sendResponse({ success: false, error: firstErrorMsg || "全量同步失败，无法写入飞书表格", results });
+              sendResponse({ success: false, error: result.error || result.firstErrorMsg || "全量同步失败，无法写入飞书表格", results: result.results || [] });
             }
           } catch (syncErr) {
             console.error("[Background] Bulk sync plantation projects to Feishu failed:", syncErr);
@@ -534,5 +600,4 @@ async function fetchPixivDic(query) {
     return { success: false, error: "Pixiv百科网络请求失败，请检查网络连接", targetUrl: searchUrl, source: "pixiv" };
   }
 }
-
 
