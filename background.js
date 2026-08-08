@@ -3,7 +3,7 @@
  * Handles background statistics sync, message handling, and token management.
  */
 
-import { getUserInfo, getUserProjects, getUserProjectsFirstPage, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
+import { getUserInfo, getUserProjects, getUserProjectsFirstPage, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, getSingleProjectRaw, isPlantationProject, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
 import { saveFeishuConfig, getFeishuConfig, getOrCreateFeishuSyncContext, batchUpsertMangasToFeishu } from "./utils/feishuSync.js";
 
 async function injectContentScriptToAllTabs() {
@@ -298,17 +298,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           try {
             const result = await enqueueFeishuSync(async () => {
               await assertFeishuConfigured();
-              // Team-wide project list is the single source of truth for Feishu rows
-              const teamProjects = await getCachedTeamProjects();
-              const targetProj = teamProjects.find(p => String(p.id || p._id) === String(projectId));
+
+              // 1. Fetch single project detail directly (1 lightweight HTTP request)
+              let targetProj = await getSingleProjectRaw(projectId);
+              if (!targetProj && _teamProjCache) {
+                targetProj = _teamProjCache.find(p => String(p.id || p._id) === String(projectId));
+              }
+
               if (!targetProj) {
+                return { error: "无法找到指定项目数据" };
+              }
+
+              // 2. Check if project belongs to Plantation Team
+              if (!isPlantationProject(targetProj)) {
                 return { skipped: true };
               }
 
+              // 3. Extract manga name and targetedly fetch ONLY chapter projects for this manga
               const mangaName = extractMangaName(targetProj);
-              const mangaProjects = teamProjects.filter(p => extractMangaName(p) === mangaName);
-              const rows = await buildRowsWithMembers(mangaProjects);
+              if (!mangaName) {
+                return { error: "无法从项目名称中解析漫画名" };
+              }
 
+              let mangaProjects = [];
+              if (_teamProjCache && _teamProjCache.length > 0) {
+                mangaProjects = _teamProjCache.filter(p => extractMangaName(p) === mangaName);
+              }
+
+              // If not found in cache, fetch targeted page using word=mangaName (1 single HTTP page request)
+              if (!mangaProjects || mangaProjects.length === 0) {
+                mangaProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100, mangaName);
+              }
+
+              // Safeguard: ensure targetProj itself is in the list
+              if (!mangaProjects || mangaProjects.length === 0) {
+                mangaProjects = [targetProj];
+              }
+
+              const rows = await buildRowsWithMembers(mangaProjects);
               if (rows.length === 0) {
                 return { error: "构建飞书行数据失败" };
               }

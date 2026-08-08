@@ -399,12 +399,15 @@ export async function getUserProjectsFirstPage(limit = 20) {
 /**
  * Fetch projects belonging to 种植园汉化组 team (fetches all pages for 100% accurate total count)
  * Endpoint: /v1/teams/{teamId}/projects
+ * @param {string} teamId
+ * @param {number} page
+ * @param {number} limit
+ * @param {string} word Optional search keyword (e.g. manga name)
  */
-export async function getTeamProjects(teamId = TEAM_PLANTATION_ID, page = 1, limit = 100) {
-  const query = new URLSearchParams({
-    page,
-    limit
-  }).toString();
+export async function getTeamProjects(teamId = TEAM_PLANTATION_ID, page = 1, limit = 100, word = "") {
+  const queryObj = { page, limit };
+  if (word) queryObj.word = word;
+  const query = new URLSearchParams(queryObj).toString();
 
   const { data: res, headers } = await fetchWithAuthFull(`/v1/teams/${teamId}/projects?${query}`);
   let list = [];
@@ -621,6 +624,22 @@ export function formatSingleProjectStats(proj) {
     proofreadProgress,
     updatedAt: getProp(proj, "updatedAt", "updated_at") || getProp(proj, "createTime", "create_time") || new Date().toISOString()
   };
+}
+
+/**
+ * Fetch raw project object by ID directly from API
+ * @param {string} projectId
+ * @returns {Object|null}
+ */
+export async function getSingleProjectRaw(projectId) {
+  if (!projectId) return null;
+  try {
+    const res = await fetchWithAuth(`/v1/projects/${projectId}`);
+    return res.data || res.project || res || null;
+  } catch (err) {
+    console.warn(`[MoetranAPI] Failed to fetch project ${projectId} directly:`, err);
+    return null;
+  }
 }
 
 /**

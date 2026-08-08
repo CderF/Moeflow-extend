@@ -224,6 +224,14 @@ function initFloatingWidget() {
           </svg>
           刷新
         </button>
+        <button class="mt-btn mt-btn-secondary" id="mt-sync-feishu-btn" title="同步当前漫画进度至飞书多维表格">
+          <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          同步飞书
+        </button>
         <button class="mt-btn mt-btn-primary" id="mt-copy-report-btn">
           <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
@@ -755,6 +763,50 @@ function initFloatingWidget() {
       });
     });
   });
+
+  const syncFeishuBtn = document.getElementById("mt-sync-feishu-btn");
+  if (syncFeishuBtn) {
+    syncFeishuBtn.addEventListener("click", () => {
+      if (syncFeishuBtn.disabled) return;
+      const projectId = extractCurrentProjectId();
+      if (!projectId) return;
+
+      const origHTML = syncFeishuBtn.innerHTML;
+      syncFeishuBtn.disabled = true;
+      syncFeishuBtn.innerHTML = `
+        <svg class="mt-sf-icon" style="animation: sf-spin 1s infinite linear;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6"/>
+          <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1 1A10 10 0 0 0 22 12.5"/>
+        </svg>
+        同步中
+      `;
+
+      safeSendMessage({ type: "SYNC_PROJECT_TO_FEISHU", projectId }, (res) => {
+        syncFeishuBtn.disabled = false;
+        if (res && res.success) {
+          syncFeishuBtn.innerHTML = `
+            <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            ${res.skipped ? "已跳过" : "已同步"}
+          `;
+        } else {
+          const errMsg = res ? (res.error || "同步失败") : "同步超时";
+          syncFeishuBtn.innerHTML = `
+            <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            ${escapeHtml(errMsg.length > 5 ? "同步失败" : errMsg)}
+          `;
+        }
+        setTimeout(() => {
+          syncFeishuBtn.innerHTML = origHTML;
+        }, 2200);
+      });
+    });
+  }
 }
 
 
@@ -1043,6 +1095,7 @@ function renderSingleProjectStatsInModal(projStats, userProfile) {
   const body = document.getElementById("mt-modal-body-content");
   const titleText = document.getElementById("mt-modal-title-text");
   const copyBtn = document.getElementById("mt-copy-report-btn");
+  const syncFeishuBtn = document.getElementById("mt-sync-feishu-btn");
   if (!body) return;
 
   window.__mt_current_project_stats = projStats;
@@ -1051,6 +1104,11 @@ function renderSingleProjectStatsInModal(projStats, userProfile) {
     copyBtn.disabled = false;
     copyBtn.style.opacity = "1";
     copyBtn.style.cursor = "pointer";
+  }
+  if (syncFeishuBtn) {
+    syncFeishuBtn.disabled = false;
+    syncFeishuBtn.style.opacity = "1";
+    syncFeishuBtn.style.cursor = "pointer";
   }
 
   if (titleText) {
@@ -1119,6 +1177,7 @@ function renderNoActiveProjectState(customMsg = "当前没有正在工作的项�
   const body = document.getElementById("mt-modal-body-content");
   const titleText = document.getElementById("mt-modal-title-text");
   const copyBtn = document.getElementById("mt-copy-report-btn");
+  const syncFeishuBtn = document.getElementById("mt-sync-feishu-btn");
   if (!body) return;
 
   window.__mt_current_project_stats = null;
@@ -1127,6 +1186,11 @@ function renderNoActiveProjectState(customMsg = "当前没有正在工作的项�
     copyBtn.disabled = true;
     copyBtn.style.opacity = "0.5";
     copyBtn.style.cursor = "not-allowed";
+  }
+  if (syncFeishuBtn) {
+    syncFeishuBtn.disabled = true;
+    syncFeishuBtn.style.opacity = "0.5";
+    syncFeishuBtn.style.cursor = "not-allowed";
   }
 
   if (titleText) {
