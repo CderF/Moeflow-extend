@@ -299,47 +299,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const result = await enqueueFeishuSync(async () => {
               await assertFeishuConfigured();
 
-              // 1. Fetch single project detail directly (1 lightweight HTTP request)
-              let targetProj = await getSingleProjectRaw(projectId);
-              if (!targetProj && _teamProjCache) {
-                targetProj = _teamProjCache.find(p => String(p.id || p._id) === String(projectId));
+              // 1. Fetch team-wide project list (uses 30s in-memory cache)
+              const teamProjects = await getCachedTeamProjects();
+              if (!teamProjects || teamProjects.length === 0) {
+                return { error: "未在种植园汉化组找到任何项目" };
               }
 
+              // 2. Locate target project to verify team membership and extract manga name
+              const targetProj = teamProjects.find(p => String(p.id || p._id) === String(projectId));
               if (!targetProj) {
-                return { error: "无法找到指定项目数据" };
-              }
-
-              // 2. Check if project belongs to Plantation Team
-              if (!isPlantationProject(targetProj)) {
                 return { skipped: true };
               }
 
-              // 3. Extract manga name and targetedly fetch ONLY chapter projects for this manga
+              // 3. Extract manga name and filter ALL chapter projects belonging to this manga
               const mangaName = extractMangaName(targetProj);
               if (!mangaName) {
                 return { error: "无法从项目名称中解析漫画名" };
               }
 
-              let mangaProjects = [];
-              if (_teamProjCache && _teamProjCache.length > 0) {
-                mangaProjects = _teamProjCache.filter(p => extractMangaName(p) === mangaName);
+              const mangaProjects = teamProjects.filter(p => extractMangaName(p) === mangaName);
+              if (mangaProjects.length === 0) {
+                return { error: "未找到该漫画的相关章节" };
               }
 
-              // If not found in cache, fetch targeted page using word=mangaName (1 single HTTP page request)
-              if (!mangaProjects || mangaProjects.length === 0) {
-                mangaProjects = await getTeamProjects(TEAM_PLANTATION_ID, 1, 100, mangaName);
-              }
-
-              // Safeguard: ensure targetProj itself is in the list
-              if (!mangaProjects || mangaProjects.length === 0) {
-                mangaProjects = [targetProj];
-              }
-
+              // 4. Build Feishu row using ALL chapters of this manga for 100% consistent latest/current calculation
               const rows = await buildRowsWithMembers(mangaProjects);
               if (rows.length === 0) {
                 return { error: "构建飞书行数据失败" };
               }
 
+              // 5. Upsert ONLY this manga's row into Feishu Bitable
               const { successCount, firstErrorMsg, results } = await upsertRowsToFeishu(rows);
               if (successCount > 0) {
                 return { result: results.find(r => r.success) || results[0] };

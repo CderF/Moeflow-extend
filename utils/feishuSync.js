@@ -265,8 +265,10 @@ export async function createFeishuSyncContext() {
     throw new Error("缺少 app_token 或 table_id，请检查设置");
   }
 
-  const actualFields = await ensureRequiredFieldsExist(token, appToken, tableId);
-  const records = await listAllRecords(token, appToken, tableId);
+  const [actualFields, records] = await Promise.all([
+    ensureRequiredFieldsExist(token, appToken, tableId),
+    listAllRecords(token, appToken, tableId)
+  ]);
 
   const byMangaName = new Map();
   const emptyQueue = [];

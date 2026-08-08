@@ -425,25 +425,33 @@ export async function getTeamProjects(teamId = TEAM_PLANTATION_ID, page = 1, lim
 
   if (!isNaN(parsedTotal) && parsedTotal > allTeamProjects.length && pageSize > 0) {
     const totalPages = Math.min(30, Math.ceil(parsedTotal / pageSize));
-    for (let p = 2; p <= totalPages; p++) {
-      try {
-        const nextQuery = new URLSearchParams({ page: p, limit }).toString();
-        const { data: nextRes } = await fetchWithAuthFull(`/v1/teams/${teamId}/projects?${nextQuery}`);
-        let nextList = [];
-        if (Array.isArray(nextRes)) nextList = nextRes;
-        else if (Array.isArray(nextRes.data)) nextList = nextRes.data;
-        else if (nextRes.data && Array.isArray(nextRes.data.list)) nextList = nextRes.data.list;
-        else if (nextRes.data && Array.isArray(nextRes.data.projects)) nextList = nextRes.data.projects;
-        else if (nextRes.data && Array.isArray(nextRes.data.rows)) nextList = nextRes.data.rows;
+    const pagePromises = [];
 
-        if (nextList.length > 0) {
-          allTeamProjects = allTeamProjects.concat(nextList);
-        } else {
-          break;
+    for (let p = 2; p <= totalPages; p++) {
+      pagePromises.push((async () => {
+        try {
+          const nextQueryObj = { page: p, limit };
+          if (word) nextQueryObj.word = word;
+          const nextQuery = new URLSearchParams(nextQueryObj).toString();
+          const { data: nextRes } = await fetchWithAuthFull(`/v1/teams/${teamId}/projects?${nextQuery}`);
+          let nextList = [];
+          if (Array.isArray(nextRes)) nextList = nextRes;
+          else if (Array.isArray(nextRes.data)) nextList = nextRes.data;
+          else if (nextRes.data && Array.isArray(nextRes.data.list)) nextList = nextRes.data.list;
+          else if (nextRes.data && Array.isArray(nextRes.data.projects)) nextList = nextRes.data.projects;
+          else if (nextRes.data && Array.isArray(nextRes.data.rows)) nextList = nextRes.data.rows;
+          return nextList;
+        } catch (e) {
+          console.warn(`[MoetranAPI] Team projects page ${p} fetch warning:`, e);
+          return [];
         }
-      } catch (e) {
-        console.warn(`[MoetranAPI] Team projects page ${p} fetch warning:`, e);
-        break;
+      })());
+    }
+
+    const pageResults = await Promise.all(pagePromises);
+    for (const nextList of pageResults) {
+      if (nextList && nextList.length > 0) {
+        allTeamProjects = allTeamProjects.concat(nextList);
       }
     }
   }
