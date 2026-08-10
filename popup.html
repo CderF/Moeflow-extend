@@ -83,6 +83,64 @@
       </div>
     </div>
 
+    <!-- Feishu Bitable Settings Section -->
+    <div class="diagnostic-wrapper" style="margin-top: 10px;">
+      <button class="diagnostic-toggle-btn" id="btn-toggle-feishu-config">
+        <span class="btn-inner">
+          <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          飞书多维表格同步配置
+        </span>
+        <span id="feishu-config-arrow" class="arrow-icon">
+          <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </span>
+      </button>
+
+      <div class="diagnostic-panel" id="feishu-config-box" style="display: none; flex-direction: column; gap: 10px; padding: 12px;">
+        <!-- Config field status grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">App ID</span>
+            <span class="feishu-field-badge" id="feishu-status-appid">未设置</span>
+          </div>
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">App Secret</span>
+            <span class="feishu-field-badge" id="feishu-status-appsecret">未设置</span>
+          </div>
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">App Token</span>
+            <span class="feishu-field-badge" id="feishu-status-apptoken">未设置</span>
+          </div>
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">Table ID</span>
+            <span class="feishu-field-badge" id="feishu-status-tableid">未设置</span>
+          </div>
+        </div>
+
+        <!-- Hidden file input -->
+        <input type="file" id="feishu-cfg-file-input" accept=".json" style="display: none;" />
+
+        <!-- Action buttons -->
+        <div style="display: flex; gap: 8px; margin-top: 2px;">
+          <button class="btn btn-primary" id="btn-import-feishu-cfg" style="flex: 2; padding: 6px 12px; font-size: 12px;">
+            <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            导入配置文件
+          </button>
+          <button class="btn btn-secondary" id="btn-bulk-sync-plantation" style="flex: 2; padding: 6px 12px; font-size: 12px;" title="抓取种植园全量项目导入飞书">初始全量导入</button>
+          <button class="btn btn-danger" id="btn-clear-feishu-cfg" style="flex: 1; padding: 6px 8px; font-size: 12px;" title="清除全部飞书凭证配置">清除</button>
+        </div>
+
+        <div id="feishu-cfg-status" style="font-size: 11px; opacity: 0.7; text-align: center;"></div>
+      </div>
+    </div>
+
     <!-- Diagnostic Panel Section -->
     <div class="diagnostic-wrapper">
       <button class="diagnostic-toggle-btn" id="btn-toggle-diagnostic">
@@ -118,13 +176,13 @@
 
   <!-- Footer Actions -->
   <footer class="footer">
-    <button class="btn btn-secondary" id="btn-open-dashboard">
+    <button class="btn btn-secondary" id="btn-sync-feishu" title="一次性抓取最近 10 个项目进度写入飞书">
       <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="2" y1="12" x2="22" y2="12"></line>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
       </svg>
-      仪表盘
+      <span id="sync-feishu-btn-text">更新进度</span>
     </button>
     <button class="btn btn-primary" id="btn-copy-report">
       <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -1,8 +1,9 @@
-import { getUserInfo, getUserProjects, calculateWorkStats } from "./utils/moetranApi.js";
+
 
 document.addEventListener("DOMContentLoaded", () => {
   const btnRefresh = document.getElementById("btn-refresh-popup");
-  const btnDashboard = document.getElementById("btn-open-dashboard");
+  const btnSyncFeishu = document.getElementById("btn-sync-feishu");
+  const syncBtnText = document.getElementById("sync-feishu-btn-text");
   const btnCopyReport = document.getElementById("btn-copy-report");
   const copyBtnText = document.getElementById("copy-btn-text");
   const btnToggleDiag = document.getElementById("btn-toggle-diagnostic");
@@ -89,10 +90,183 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Open Dashboard handler
-  btnDashboard.addEventListener("click", () => {
-    chrome.tabs.create({ url: "https://moetran.com/dashboard/projects" });
-  });
+  // Feishu Settings Elements & Handlers
+  const btnToggleFeishuConfig = document.getElementById("btn-toggle-feishu-config");
+  const feishuConfigBox = document.getElementById("feishu-config-box");
+  const feishuConfigArrow = document.getElementById("feishu-config-arrow");
+  const btnImportFeishuCfg = document.getElementById("btn-import-feishu-cfg");
+  const feishuCfgFileInput = document.getElementById("feishu-cfg-file-input");
+  const btnClearFeishuCfg = document.getElementById("btn-clear-feishu-cfg");
+  const btnBulkSyncPlantation = document.getElementById("btn-bulk-sync-plantation");
+  const feishuCfgStatus = document.getElementById("feishu-cfg-status");
+
+  /**
+   * Render the four field status badges based on current saved config.
+   * Fetches fresh from storage each time so the display always reflects reality.
+   */
+  function renderFeishuConfigStatus() {
+    if (!(typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id)) return;
+    chrome.runtime.sendMessage({ type: "GET_FEISHU_CONFIG" }, (res) => {
+      if (chrome.runtime.lastError) return;
+      const cfg = (res && res.success && res.config) ? res.config : {};
+      const fields = [
+        { id: "feishu-status-appid",     val: cfg.appId },
+        { id: "feishu-status-appsecret", val: cfg.appSecret },
+        { id: "feishu-status-apptoken",  val: cfg.appToken },
+        { id: "feishu-status-tableid",   val: cfg.tableId },
+      ];
+      fields.forEach(({ id, val }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const isSet = val && val.trim().length > 0;
+        el.textContent = isSet ? "已设置 ✓" : "未设置";
+        el.classList.toggle("feishu-badge-set", isSet);
+        el.classList.toggle("feishu-badge-unset", !isSet);
+      });
+    });
+  }
+
+  // Fetch initial status when popup opens
+  renderFeishuConfigStatus();
+
+  // Toggle config panel visibility
+  if (btnToggleFeishuConfig && feishuConfigBox) {
+    btnToggleFeishuConfig.addEventListener("click", () => {
+      const isHidden = feishuConfigBox.style.display === "none";
+      feishuConfigBox.style.display = isHidden ? "flex" : "none";
+      if (feishuConfigArrow) {
+        if (isHidden) feishuConfigArrow.classList.add("is-open");
+        else feishuConfigArrow.classList.remove("is-open");
+      }
+      if (isHidden) renderFeishuConfigStatus();
+    });
+  }
+
+  // Import config file button → trigger hidden file input
+  if (btnImportFeishuCfg && feishuCfgFileInput) {
+    btnImportFeishuCfg.addEventListener("click", () => {
+      feishuCfgFileInput.value = ""; // reset so same file can be re-selected
+      feishuCfgFileInput.click();
+    });
+
+    feishuCfgFileInput.addEventListener("change", () => {
+      const file = feishuCfgFileInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(e.target.result);
+        } catch {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 文件格式错误，请选择有效的 JSON 文件";
+          return;
+        }
+
+        if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ JSON 内容无效，需为对象格式";
+          return;
+        }
+
+        // Merge: only overwrite fields present and non-empty in the file
+        const allowedKeys = ["appId", "appSecret", "appToken", "tableId"];
+        const incoming = {};
+        allowedKeys.forEach(k => {
+          if (parsed[k] !== undefined && String(parsed[k]).trim().length > 0) {
+            incoming[k] = String(parsed[k]).trim();
+          }
+        });
+
+        if (Object.keys(incoming).length === 0) {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "⚠️ 文件中未找到有效的配置字段";
+          return;
+        }
+
+        if (feishuCfgStatus) feishuCfgStatus.textContent = "保存中...";
+
+        // Fetch current config, merge, then save
+        chrome.runtime.sendMessage({ type: "GET_FEISHU_CONFIG" }, (res) => {
+          if (chrome.runtime.lastError) return;
+          const current = (res && res.success && res.config) ? res.config : {};
+          const merged = { ...current, ...incoming };
+
+          chrome.runtime.sendMessage({ type: "SAVE_FEISHU_CONFIG", config: merged }, (saveRes) => {
+            if (saveRes && saveRes.success) {
+              const count = Object.keys(incoming).length;
+              if (feishuCfgStatus) feishuCfgStatus.textContent = `✅ 已导入并保存 ${count} 项配置`;
+              setTimeout(() => { if (feishuCfgStatus) feishuCfgStatus.textContent = ""; }, 3500);
+              renderFeishuConfigStatus();
+            } else {
+              if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 保存失败: " + (saveRes?.error || "未知错误");
+            }
+          });
+        });
+      };
+
+      reader.onerror = () => {
+        if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 文件读取失败";
+      };
+
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  // Clear all Feishu credentials
+  if (btnClearFeishuCfg) {
+    btnClearFeishuCfg.addEventListener("click", () => {
+      if (!confirm("确定清除全部飞书凭证配置吗？")) return;
+
+      chrome.runtime.sendMessage({
+        type: "SAVE_FEISHU_CONFIG",
+        config: { appId: "", appSecret: "", appToken: "", tableId: "" }
+      }, (res) => {
+        if (res && res.success) {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "🗑️ 配置已清除";
+          setTimeout(() => { if (feishuCfgStatus) feishuCfgStatus.textContent = ""; }, 2500);
+          renderFeishuConfigStatus();
+        } else {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 清除失败: " + (res?.error || "未知错误");
+        }
+      });
+    });
+  }
+
+  if (btnSyncFeishu) {
+    btnSyncFeishu.addEventListener("click", () => {
+      btnSyncFeishu.disabled = true;
+      if (syncBtnText) syncBtnText.textContent = "正在同步...";
+
+      chrome.runtime.sendMessage({ type: "SYNC_RECENT_TO_FEISHU" }, (res) => {
+        btnSyncFeishu.disabled = false;
+        if (res && res.success) {
+          if (syncBtnText) syncBtnText.textContent = `已更新 ${res.syncedCount || 0} 个漫画`;
+          setTimeout(() => { if (syncBtnText) syncBtnText.textContent = "更新进度"; }, 3500);
+        } else {
+          if (syncBtnText) syncBtnText.textContent = "同步失败";
+          alert("同步到飞书失败: " + (res?.error || "未知错误，请先检查飞书配置凭证"));
+          setTimeout(() => { if (syncBtnText) syncBtnText.textContent = "更新进度"; }, 3500);
+        }
+      });
+    });
+  }
+
+  if (btnBulkSyncPlantation) {
+    btnBulkSyncPlantation.addEventListener("click", () => {
+      if (!confirm("确定抓取种植园汉化组的所有项目全量同步到飞书表格吗？")) return;
+
+      btnBulkSyncPlantation.disabled = true;
+      if (feishuCfgStatus) feishuCfgStatus.textContent = "正在抓取全量项目并导入飞书...";
+
+      chrome.runtime.sendMessage({ type: "BULK_SYNC_PLANTATION_TO_FEISHU" }, (res) => {
+        btnBulkSyncPlantation.disabled = false;
+        if (res && res.success) {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = `🎉 成功完成初始全量导入！共同步 ${res.syncedCount || 0} 个漫画项目`;
+        } else {
+          if (feishuCfgStatus) feishuCfgStatus.textContent = "❌ 全量导入失败: " + (res?.error || "未知错误");
+        }
+      });
+    });
+  }
 
   // Project item card click delegation
   const projectListContainer = document.getElementById("project-list-container");

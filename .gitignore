@@ -6,3 +6,16 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Python virtual environment (used by moeflow-sync-dev MCP server)
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment & secrets (never commit these)
+.env
+.env.*
+*.key
+*.pem
+*.secret

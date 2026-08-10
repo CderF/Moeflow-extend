@@ -697,3 +697,59 @@ html[data-mt-theme="dark"] .icon-dark {
 .btn-secondary:active {
   transform: scale(0.97);
 }
+
+/* Danger / destructive button (清除配置) */
+.btn-danger {
+  background: transparent;
+  color: var(--sf-red, #e53e3e);
+  border: 1px solid var(--sf-red, #e53e3e);
+}
+
+.btn-danger:hover {
+  background: color-mix(in srgb, var(--sf-red, #e53e3e) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: scale(0.97);
+}
+
+/* Feishu config status grid */
+.feishu-field-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: var(--sf-card-bg);
+  border: 1px solid var(--sf-border);
+  border-radius: 7px;
+  gap: 6px;
+}
+
+.feishu-field-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sf-text-secondary);
+  white-space: nowrap;
+}
+
+.feishu-field-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.feishu-badge-set {
+  background: color-mix(in srgb, var(--sf-green, #48bb78) 15%, transparent);
+  color: var(--sf-green, #38a169);
+  border: 1px solid color-mix(in srgb, var(--sf-green, #48bb78) 30%, transparent);
+}
+
+.feishu-badge-unset {
+  background: color-mix(in srgb, var(--sf-text-tertiary, #aaa) 10%, transparent);
+  color: var(--sf-text-tertiary, #aaa);
+  border: 1px solid var(--sf-border);
+}

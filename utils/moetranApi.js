@@ -343,10 +343,11 @@ export async function getUserProjects(page = 1, limit = 100, word = "") {
   const parsedTotal = headerTotal ? parseInt(headerTotal, 10) : (res.total || res.data?.total || res.count || list.length);
 
   let allProjects = [...list];
+  const pageSize = list.length || 20;
 
   // If total items exceed first page, fetch remaining pages to ensure 100% accurate count
-  if (!isNaN(parsedTotal) && parsedTotal > list.length && list.length > 0) {
-    const totalPages = Math.min(10, Math.ceil(parsedTotal / limit)); // Cap at 10 pages for safety
+  if (!isNaN(parsedTotal) && parsedTotal > allProjects.length && pageSize > 0) {
+    const totalPages = Math.min(30, Math.ceil(parsedTotal / pageSize));
     for (let p = 2; p <= totalPages; p++) {
       try {
         const nextQuery = new URLSearchParams({ page: p, limit, word }).toString();
@@ -378,14 +379,35 @@ export async function getUserProjects(page = 1, limit = 100, word = "") {
 }
 
 /**
- * Fetch projects belonging to 种植园汉化组 team (default limit: 20 items)
- * Endpoint: /v1/teams/{teamId}/projects
+ * Lightweight variant: fetch only the first page of the user's project list.
+ * Used by SYNC_RECENT_TO_FEISHU to obtain recent manga names without the
+ * full multi-page iteration cost of getUserProjects().
+ * @param {number} limit - Number of items to request (default: 20)
+ * @returns {Array} First-page project list (no pagination metadata)
  */
-export async function getTeamProjects(teamId = TEAM_PLANTATION_ID, page = 1, limit = 100) {
-  const query = new URLSearchParams({
-    page,
-    limit
-  }).toString();
+export async function getUserProjectsFirstPage(limit = 20) {
+  const { data: res } = await fetchWithAuthFull(`/v1/user/projects?page=1&limit=${limit}&word=`);
+  let list = [];
+  if (Array.isArray(res)) list = res;
+  else if (Array.isArray(res.data)) list = res.data;
+  else if (res.data && Array.isArray(res.data.list)) list = res.data.list;
+  else if (res.data && Array.isArray(res.data.projects)) list = res.data.projects;
+  else if (res.data && Array.isArray(res.data.rows)) list = res.data.rows;
+  return list.slice(0, limit);
+}
+
+/**
+ * Fetch projects belonging to 种植园汉化组 team (fetches all pages for 100% accurate total count)
+ * Endpoint: /v1/teams/{teamId}/projects
+ * @param {string} teamId
+ * @param {number} page
+ * @param {number} limit
+ * @param {string} word Optional search keyword (e.g. manga name)
+ */
+export async function getTeamProjects(teamId = TEAM_PLANTATION_ID, page = 1, limit = 100, word = "") {
+  const queryObj = { page, limit };
+  if (word) queryObj.word = word;
+  const query = new URLSearchParams(queryObj).toString();
 
   const { data: res, headers } = await fetchWithAuthFull(`/v1/teams/${teamId}/projects?${query}`);
   let list = [];
@@ -398,8 +420,44 @@ export async function getTeamProjects(teamId = TEAM_PLANTATION_ID, page = 1, lim
   const headerTotal = headers.get("x-pagination-count") || headers.get("x-total-count") || headers.get("x-pagination-total");
   const parsedTotal = headerTotal ? parseInt(headerTotal, 10) : (res.total || res.data?.total || res.count || list.length);
 
-  list.totalTeamProjects = isNaN(parsedTotal) ? list.length : Math.max(parsedTotal, list.length);
-  return list;
+  let allTeamProjects = [...list];
+  const pageSize = list.length || 20;
+
+  if (!isNaN(parsedTotal) && parsedTotal > allTeamProjects.length && pageSize > 0) {
+    const totalPages = Math.min(30, Math.ceil(parsedTotal / pageSize));
+    const pagePromises = [];
+
+    for (let p = 2; p <= totalPages; p++) {
+      pagePromises.push((async () => {
+        try {
+          const nextQueryObj = { page: p, limit };
+          if (word) nextQueryObj.word = word;
+          const nextQuery = new URLSearchParams(nextQueryObj).toString();
+          const { data: nextRes } = await fetchWithAuthFull(`/v1/teams/${teamId}/projects?${nextQuery}`);
+          let nextList = [];
+          if (Array.isArray(nextRes)) nextList = nextRes;
+          else if (Array.isArray(nextRes.data)) nextList = nextRes.data;
+          else if (nextRes.data && Array.isArray(nextRes.data.list)) nextList = nextRes.data.list;
+          else if (nextRes.data && Array.isArray(nextRes.data.projects)) nextList = nextRes.data.projects;
+          else if (nextRes.data && Array.isArray(nextRes.data.rows)) nextList = nextRes.data.rows;
+          return nextList;
+        } catch (e) {
+          console.warn(`[MoetranAPI] Team projects page ${p} fetch warning:`, e);
+          return [];
+        }
+      })());
+    }
+
+    const pageResults = await Promise.all(pagePromises);
+    for (const nextList of pageResults) {
+      if (nextList && nextList.length > 0) {
+        allTeamProjects = allTeamProjects.concat(nextList);
+      }
+    }
+  }
+
+  allTeamProjects.totalTeamProjects = isNaN(parsedTotal) ? allTeamProjects.length : Math.max(parsedTotal, allTeamProjects.length);
+  return allTeamProjects;
 }
 
 /**
@@ -609,21 +667,323 @@ export async function getSingleProjectDetail(projectId) {
 }
 
 /**
- * Generate brief report text for a single project
+ * Parse a chapter project name into a comparable structure.
+ * 数字话数家族：纯数字（"70"、"38.5"）、标准章节（"第70话"、"12话"、"第5卷"，含日文 話/巻）、
+ * 以及带文字后缀的变体（"第70话(修)"、"70话 下"）——后缀变体以数字前缀作为比较基准，
+ * 且永远高于同话数的无后缀原名。全角数字先归一化为半角。
+ * 其余含文字的名称（番外篇、番外篇2、特别篇 2024 ...）为文字话名，num 为 null，
+ * 被选中时完整名称原样写入表格
  */
-export function generateSingleProjectReportText(projStats, userProfile) {
-  if (!projStats) return "";
-  const nameStr = userProfile && userProfile.name ? ` (${userProfile.name})` : "";
-  const statusStr = projStats.isFinished ? "🏁 已完成" : "🟢 进行中";
+function parseChapterName(name) {
+  if (!name || typeof name !== "string") return { num: null, suffixed: false };
+  const trimmed = name.trim().replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
 
-  return `【🌱 种植园汉化组 - 当前项目简报${nameStr}】\n` +
-         `------------------------------\n` +
-         `📌 项目全称：${projStats.fullTitle}\n` +
-         `🏷️ 项目状态：${statusStr}${projStats.isPlantation ? ' | 🌱 种植园项目' : ''}\n` +
-         `📊 句子总数：${projStats.sourceCount} 句\n` +
-         `📝 翻译进度：${projStats.translatedCount} / ${projStats.sourceCount} (${projStats.translationProgress}%)\n` +
-         `🔍 校对进度：${projStats.checkedCount} / ${projStats.sourceCount} (${projStats.proofreadProgress}%)\n` +
-         `------------------------------\n` +
-         `发送自：种植园尨译助手 🚀`;
+  let match = trimmed.match(/^(\d+(?:\.\d+)?)$/);
+  if (match) return { num: parseFloat(match[1]), suffixed: false };
+  match = trimmed.match(/^第\s*(\d+(?:\.\d+)?)\s*[话話卷巻回集]$/);
+  if (match) return { num: parseFloat(match[1]), suffixed: false };
+  match = trimmed.match(/^(\d+(?:\.\d+)?)\s*[话話卷巻回集]$/);
+  if (match) return { num: parseFloat(match[1]), suffixed: false };
+  // 带文字后缀的数字章节；后缀首字符不能是数字，避免把 "第70话2" 误当作 70 话的后缀版
+  match = trimmed.match(/^第\s*(\d+(?:\.\d+)?)\s*[话話卷巻回集]\s*[^\d\s]/);
+  if (match) return { num: parseFloat(match[1]), suffixed: true };
+  match = trimmed.match(/^(\d+(?:\.\d+)?)\s*[话話卷巻回集]\s*[^\d\s]/);
+  if (match) return { num: parseFloat(match[1]), suffixed: true };
+  return { num: null, suffixed: false };
 }
 
+/**
+ * Extract chapter number from project name (numeric prefix for suffixed variants);
+ * returns null for text chapter names
+ */
+export function extractChapterNumber(name) {
+  return parseChapterName(name).num;
+}
+
+/**
+ * Determine single chapter status based on sentence counts
+ * 待翻译: 翻译句数为 0（含无句数）; 翻译中: 翻译未完成; 待校对/校对中: 翻译完成后按校对进度; 已完成: 翻译与校对均 100%
+ */
+export function determineChapterStatus(sourceCount, translatedCount, checkedCount) {
+  if (!translatedCount || translatedCount <= 0) {
+    return "待翻译";
+  }
+  const translationProgress = sourceCount > 0 ? Math.min(100, Math.round((translatedCount / sourceCount) * 100)) : 0;
+  const proofreadProgress = sourceCount > 0 ? Math.min(100, Math.round((checkedCount / sourceCount) * 100)) : 0;
+
+  if (translationProgress < 100) {
+    return "翻译中";
+  }
+  if (proofreadProgress < 100) {
+    return checkedCount > 0 ? "校对中" : "待校对";
+  }
+  return "已完成";
+}
+
+/**
+ * Extract Manga (project_set) name from a project object
+ */
+export function extractMangaName(proj) {
+  if (!proj) return "未命名漫画";
+  const projectSetObj = proj.project_set || proj.projectSet || {};
+  if (projectSetObj.name) return projectSetObj.name.trim();
+
+  let subName = proj.name || "未命名项目";
+  const bracketMatch = subName.match(/^[\{\[\【\（](.+?)[\}\]\】\）]\s*(.+)$/);
+  if (bracketMatch) {
+    return bracketMatch[1].trim();
+  }
+  const parts = subName.split(/\s*[\/\-_]\s*/);
+  if (parts.length >= 2) {
+    return parts[0].trim();
+  }
+  return subName;
+}
+
+/**
+ * Parse project members into creator (图源) and participants (参与人员 list)
+ * Member entries may nest user info under user/userInfo/user_info; role lives on the membership record
+ */
+export function extractProjectMembers(proj) {
+  let creator = "";
+  let participants = [];
+
+  const rawMembers = proj.members || proj.userList || proj.users || [];
+  if (Array.isArray(rawMembers)) {
+    for (const rawEntry of rawMembers) {
+      if (!rawEntry) continue;
+      const uObj = (typeof rawEntry === "object")
+        ? (rawEntry.user || rawEntry.userInfo || rawEntry.user_info || rawEntry)
+        : {};
+      const uName = (typeof rawEntry === "string")
+        ? rawEntry
+        : (uObj.name || uObj.username || uObj.nickname || rawEntry.name || rawEntry.username || rawEntry.nickname || "");
+      if (!uName) continue;
+
+      const rawRole = (typeof rawEntry === "object")
+        ? (rawEntry.role?.name || rawEntry.role || rawEntry.projectRole || rawEntry.project_role || rawEntry.teamRole || rawEntry.type || "")
+        : "";
+      const roleStr = (typeof rawRole === "object") ? JSON.stringify(rawRole) : String(rawRole || "");
+      const isCreator = !!(rawEntry.isCreator || rawEntry.is_creator) || /创建人|创建者|owner|creator/i.test(roleStr);
+
+      if (isCreator) {
+        if (!creator) creator = uName;
+      } else {
+        participants.push(uName);
+      }
+    }
+  }
+
+  if (!creator) {
+    const cObj = proj.creator || proj.owner || proj.user || {};
+    creator = cObj.name || cObj.username || cObj.nickname || "";
+  }
+
+  if (!creator && participants.length > 0) {
+    creator = participants.shift();
+  }
+
+  // The 图源 occupies its own column; never duplicate them into 参与人员
+  if (creator) {
+    participants = participants.filter(p => p !== creator);
+  }
+
+  const formattedParticipants = [];
+  for (let i = 0; i < Math.min(4, participants.length); i++) {
+    let pName = participants[i];
+    if (i === 3 && participants.length > 4) {
+      pName = `${pName}等`;
+    }
+    formattedParticipants.push(pName);
+  }
+
+  return {
+    creator: creator || "暂无",
+    participants: formattedParticipants
+  };
+}
+
+/**
+ * Fetch creator & participants of a single project (图源 = 项目创建人).
+ * Endpoint confirmed against moeflow-backend MemberListAPI:
+ *   GET /v1/projects/{id}/users?page=1&limit=100
+ * Returns user objects with a nested role ("创建人" / system_code "creator" marks the creator)
+ * @param {string} projectId
+ * @returns {{ creator: string, participants: string[] } | null}
+ */
+export async function getProjectMembers(projectId) {
+  if (!projectId) return null;
+
+  try {
+    const res = await fetchWithAuth(`/v1/projects/${projectId}/users?page=1&limit=100`);
+    let memberList = [];
+    if (Array.isArray(res)) memberList = res;
+    else if (Array.isArray(res.data)) memberList = res.data;
+    else if (res.data && Array.isArray(res.data.list)) memberList = res.data.list;
+    else if (res.data && Array.isArray(res.data.users)) memberList = res.data.users;
+    else if (res.data && Array.isArray(res.data.members)) memberList = res.data.members;
+
+    if (memberList.length > 0) {
+      return extractProjectMembers({ members: memberList });
+    }
+  } catch (err) {
+    console.warn(`[MoetranAPI] Fetch project members warning (${projectId}):`, err);
+  }
+
+  return null;
+}
+
+/**
+ * Group projects list by Manga Name and compute Feishu Bitable row format
+ *
+ * Selection rules (confirmed with the team):
+ *  - 未翻译集 = 翻译句数为 0 的章节; 进行集 = 翻译句数 > 0 的章节（含已完成）
+ *  - 最新话数 = 未翻译集中话数最大者；无未翻译章节时取全部章节中话数最大者
+ *  - 当前进行话数 = 进行集中话数最大者；进行集为空时回退到最新话数项目（状态=待翻译）
+ *  - 集合内比较：纯数字集合按话数降序（带后缀名称永远高于同话数原名，再并列取创建时间最新）；
+ *    纯文字集合取最近编辑时间（edit_time）最新者；数字文字同场按各自新近度键取最新者
+ *    （文字=最近编辑时间，数字=创建时间）
+ *  - 交叉钳制：当前进行候选超过最新候选时（均为数字比话数，其余比新近度键），
+ *    最新话数与当前进行话数合并显示当前项目
+ *  - 状态 = 当前进行话数项目的单话状态；图源/参与人员 = 当前进行话数项目的创建人与成员
+ *  - 文字话名（番外篇、番外篇2、特别篇 2024 等）被选中为最新/当前进行时，完整名称原样写入表格
+ *  - 平台项目状态（ProjectStatus: 0 进行中 / 1 已完结 / 2 计划完结 / 3 计划删除）：
+ *    计划删除直接排除；已完结项目视为已关闭，不参与未翻译集与进行集，
+ *    仅在整本漫画全部已完结时兜底参选（此时状态强制显示为已完成）
+ *
+ * @param {Array} projectsList
+ * @param {Object|null} membersMap - Optional map: projectId -> { creator, participants[] }
+ */
+export function buildFeishuRowsFromProjects(projectsList = [], membersMap = null) {
+  if (!Array.isArray(projectsList) || projectsList.length === 0) return [];
+
+  const mangaMap = new Map();
+
+  for (const proj of projectsList) {
+    const mangaName = extractMangaName(proj);
+    if (!mangaMap.has(mangaName)) {
+      mangaMap.set(mangaName, []);
+    }
+    mangaMap.get(mangaName).push(proj);
+  }
+
+  const timeOf = (val) => {
+    const t = new Date(val || 0).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
+  // 新近度比较键：文字话名用最近编辑时间（edit_time），数字话数用创建时间
+  const recencyOf = (c) => (c.chapterNum === null ? timeOf(c.updatedAt) : timeOf(c.createdAt));
+
+  // 集合内选取规则（适用于最新/当前进行及全部兜底池）：
+  const pickLatestChapter = (candidates) => {
+    if (!candidates || candidates.length === 0) return null;
+    const numeric = candidates.filter(c => c.chapterNum !== null);
+    if (numeric.length === candidates.length) {
+      // 纯数字集合：话数降序；带后缀名称永远高于同话数原名；再并列取创建时间最新
+      numeric.sort((a, b) =>
+        (b.chapterNum - a.chapterNum) ||
+        ((b.suffixed ? 1 : 0) - (a.suffixed ? 1 : 0)) ||
+        (timeOf(b.createdAt) - timeOf(a.createdAt))
+      );
+      return numeric[0];
+    }
+    if (numeric.length === 0) {
+      // 纯文字集合：取最近编辑时间最新者；updatedAt 相同时以 createdAt 作为稳定二级键
+      return [...candidates].sort((a, b) =>
+        (timeOf(b.updatedAt) - timeOf(a.updatedAt)) ||
+        (timeOf(b.createdAt) - timeOf(a.createdAt))
+      )[0];
+    }
+    // 数字文字同场：数字章节永远优先于文字章节；数字集合内再按话数 / 新近度键选取
+    numeric.sort((a, b) =>
+      (b.chapterNum - a.chapterNum) ||
+      ((b.suffixed ? 1 : 0) - (a.suffixed ? 1 : 0)) ||
+      (timeOf(b.createdAt) - timeOf(a.createdAt))
+    );
+    return numeric[0];
+  };
+
+  const resultRows = [];
+
+  for (const [mangaName, chapters] of mangaMap.entries()) {
+    // moeflow-backend ProjectStatus: 0 WORKING / 1 FINISHED / 2 PLAN_FINISH / 3 PLAN_DELETE
+    const PLATFORM_FINISHED = 1;
+    const PLATFORM_PLAN_DELETE = 3;
+
+    const parsedChapters = [];
+    for (const c of chapters) {
+      const platformStatus = Number(c.status);
+      if (platformStatus === PLATFORM_PLAN_DELETE) continue; // 计划删除的项目不参与统计
+
+      const { num: chapterNum, suffixed } = parseChapterName(c.name);
+      const sourceCount = getProp(c, "sourceCount", "source_count") || 0;
+      const translatedCount = getProp(c, "translatedSourceCount", "translated_source_count") || 0;
+      const checkedCount = getProp(c, "checkedSourceCount", "checked_source_count") || 0;
+      const status = determineChapterStatus(sourceCount, translatedCount, checkedCount);
+      const createdAt = getProp(c, "createTime", "create_time") || getProp(c, "createdAt", "created_at") || "";
+      const updatedAt = getProp(c, "updatedAt", "updated_at") || getProp(c, "editTime", "edit_time") || createdAt || new Date().toISOString();
+
+      parsedChapters.push({
+        proj: c,
+        chapterNum,
+        suffixed,
+        status,
+        createdAt,
+        updatedAt,
+        // 平台已完结的项目已关闭：不再是未开坑坑位，也不参与当前进行话数
+        closed: platformStatus === PLATFORM_FINISHED
+      });
+    }
+
+    if (parsedChapters.length === 0) continue; // 整本漫画的项目都在计划删除中
+
+    const activeChapters = parsedChapters.filter(c => !c.closed);
+    const untranslatedChapters = activeChapters.filter(c => c.status === "待翻译");
+    const startedChapters = activeChapters.filter(c => c.status !== "待翻译");
+
+    // 最新话数：未翻译集最大 ->（无未翻译）活跃集最大 ->（整本已完结）全量最大
+    const latestObj = pickLatestChapter(untranslatedChapters)
+      || pickLatestChapter(activeChapters)
+      || pickLatestChapter(parsedChapters);
+    // 当前进行话数：进行集最大 -> 回退到最新话数项目
+    const currentObj = pickLatestChapter(startedChapters) || latestObj;
+    const currentStatus = !currentObj ? "待翻译" : (currentObj.closed ? "已完成" : currentObj.status);
+
+    // 交叉钳制：当前进行候选超过最新候选时，最新话数合并显示当前项目
+    // （均为数字比话数；其余情况比新近度键——文字=最近编辑时间，数字=创建时间）
+    const displayLatestObj = (() => {
+      if (!latestObj || !currentObj || latestObj === currentObj) return latestObj;
+      if (latestObj.chapterNum !== null && currentObj.chapterNum !== null) {
+        return currentObj.chapterNum > latestObj.chapterNum ? currentObj : latestObj;
+      }
+      return recencyOf(currentObj) > recencyOf(latestObj) ? currentObj : latestObj;
+    })();
+
+    // Non-numeric chapter names pass through as raw text; the Feishu payload builder
+    // adapts them to the actual column type (text column keeps the name, number column gets 0)
+    const chapterValueOf = (obj) => {
+      if (!obj) return 0;
+      return obj.chapterNum !== null ? obj.chapterNum : String(obj.proj.name || "").trim();
+    };
+
+    const lastEditTimestamp = parsedChapters.reduce((max, c) => Math.max(max, timeOf(c.updatedAt)), 0) || Date.now();
+
+    const targetProjectId = currentObj ? String(currentObj.proj.id || currentObj.proj._id || "") : "";
+    const memberInfo = (membersMap && targetProjectId && membersMap[targetProjectId]) ? membersMap[targetProjectId] : null;
+
+    resultRows.push({
+      mangaName,
+      latestChapter: chapterValueOf(displayLatestObj),
+      currentChapter: chapterValueOf(currentObj),
+      status: currentStatus,
+      creator: memberInfo ? (memberInfo.creator || "") : "",
+      participants: memberInfo && Array.isArray(memberInfo.participants) ? memberInfo.participants : [],
+      membersLoaded: !!memberInfo,
+      lastEditDate: lastEditTimestamp,
+      targetProjectId
+    });
+  }
+
+  return resultRows;
+}

@@ -30,7 +30,8 @@
     "https://*.weblio.jp/*",
     "https://*.mojidict.com/*",
     "https://*.moegirl.org.cn/*",
-    "https://*.pixiv.net/*"
+    "https://*.pixiv.net/*",
+    "https://open.feishu.cn/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https: data: blob:;"
