@@ -117,7 +117,7 @@
 
 1. **下载源码**：
    ```bash
-   git clone https://github.com/your-username/Moeflow-extend.git
+   git clone https://github.com/CderF/Moeflow-extend.git
    ```
 2. **加载扩展程序**：
    - 打开 Chrome / Edge 浏览器，访问 `chrome://extensions/`

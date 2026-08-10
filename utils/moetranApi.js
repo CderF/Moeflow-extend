@@ -635,22 +635,6 @@ export function formatSingleProjectStats(proj) {
 }
 
 /**
- * Fetch raw project object by ID directly from API
- * @param {string} projectId
- * @returns {Object|null}
- */
-export async function getSingleProjectRaw(projectId) {
-  if (!projectId) return null;
-  try {
-    const res = await fetchWithAuth(`/v1/projects/${projectId}`);
-    return res.data || res.project || res || null;
-  } catch (err) {
-    console.warn(`[MoetranAPI] Failed to fetch project ${projectId} directly:`, err);
-    return null;
-  }
-}
-
-/**
  * Fetch detailed stats for a single project by ID
  * @param {string} projectId
  */
@@ -680,25 +664,6 @@ export async function getSingleProjectDetail(projectId) {
   }
 
   return null;
-}
-
-/**
- * Generate brief report text for a single project
- */
-export function generateSingleProjectReportText(projStats, userProfile) {
-  if (!projStats) return "";
-  const nameStr = userProfile && userProfile.name ? ` (${userProfile.name})` : "";
-  const statusStr = projStats.isFinished ? "🏁 已完成" : "🟢 进行中";
-
-  return `【🌱 种植园汉化组 - 当前项目简报${nameStr}】\n` +
-         `------------------------------\n` +
-         `📌 项目全称：${projStats.fullTitle}\n` +
-         `🏷️ 项目状态：${statusStr}${projStats.isPlantation ? ' | 🌱 种植园项目' : ''}\n` +
-         `📊 句子总数：${projStats.sourceCount} 句\n` +
-         `📝 翻译进度：${projStats.translatedCount} / ${projStats.sourceCount} (${projStats.translationProgress}%)\n` +
-         `🔍 校对进度：${projStats.checkedCount} / ${projStats.sourceCount} (${projStats.proofreadProgress}%)\n` +
-         `------------------------------\n` +
-         `发送自：种植园尨译助手 🚀`;
 }
 
 /**

@@ -100,18 +100,43 @@
       </button>
 
       <div class="diagnostic-panel" id="feishu-config-box" style="display: none; flex-direction: column; gap: 10px; padding: 12px;">
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <label style="font-size: 12px; font-weight: 500; opacity: 0.8;">App ID</label>
-          <input type="text" id="feishu-app-id" placeholder="cli_a..." style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color, #ccc); background: var(--input-bg, transparent); color: inherit;" />
+        <!-- Config field status grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">App ID</span>
+            <span class="feishu-field-badge" id="feishu-status-appid">未设置</span>
+          </div>
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">App Secret</span>
+            <span class="feishu-field-badge" id="feishu-status-appsecret">未设置</span>
+          </div>
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">App Token</span>
+            <span class="feishu-field-badge" id="feishu-status-apptoken">未设置</span>
+          </div>
+          <div class="feishu-field-status">
+            <span class="feishu-field-label">Table ID</span>
+            <span class="feishu-field-badge" id="feishu-status-tableid">未设置</span>
+          </div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <label style="font-size: 12px; font-weight: 500; opacity: 0.8;">App Secret</label>
-          <input type="password" id="feishu-app-secret" placeholder="App Secret..." style="width: 100%; padding: 6px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color, #ccc); background: var(--input-bg, transparent); color: inherit;" />
+
+        <!-- Hidden file input -->
+        <input type="file" id="feishu-cfg-file-input" accept=".json" style="display: none;" />
+
+        <!-- Action buttons -->
+        <div style="display: flex; gap: 8px; margin-top: 2px;">
+          <button class="btn btn-primary" id="btn-import-feishu-cfg" style="flex: 2; padding: 6px 12px; font-size: 12px;">
+            <svg class="sf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            导入配置文件
+          </button>
+          <button class="btn btn-secondary" id="btn-bulk-sync-plantation" style="flex: 2; padding: 6px 12px; font-size: 12px;" title="抓取种植园全量项目导入飞书">初始全量导入</button>
+          <button class="btn btn-danger" id="btn-clear-feishu-cfg" style="flex: 1; padding: 6px 8px; font-size: 12px;" title="清除全部飞书凭证配置">清除</button>
         </div>
-        <div style="display: flex; gap: 8px; margin-top: 4px;">
-          <button class="btn btn-primary" id="btn-save-feishu-cfg" style="flex: 1; padding: 6px 12px; font-size: 12px;">保存凭证配置</button>
-          <button class="btn btn-secondary" id="btn-bulk-sync-plantation" style="flex: 1; padding: 6px 12px; font-size: 12px;" title="抓取种植园全量项目导入飞书">初始全量导入</button>
-        </div>
+
         <div id="feishu-cfg-status" style="font-size: 11px; opacity: 0.7; text-align: center;"></div>
       </div>
     </div>

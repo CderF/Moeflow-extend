@@ -3,8 +3,8 @@
  * Automates project progress status syncing to Feishu Bitable tables.
  */
 
-const DEFAULT_APP_TOKEN = "F91nbenvPalOnnsHG2ocevX5nff";
-const DEFAULT_TABLE_ID = "tblRiggk5q2y319A";
+const DEFAULT_APP_TOKEN = ""; // 请在 Popup 飞书配置面板中填写
+const DEFAULT_TABLE_ID = "";  // 请在 Popup 飞书配置面板中填写
 
 // In-memory cache for the shared sync context (token + field schema + record snapshot)
 // Cleared whenever Feishu credentials are updated via saveFeishuConfig().

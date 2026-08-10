@@ -3,7 +3,7 @@
  * Handles background statistics sync, message handling, and token management.
  */
 
-import { getUserInfo, getUserProjects, getUserProjectsFirstPage, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, getSingleProjectRaw, isPlantationProject, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
+import { getUserInfo, getUserProjects, getUserProjectsFirstPage, getTeamProjects, calculateWorkStats, getPlantationTeamMemberRole, normalizeTeamRole, getSingleProjectDetail, isPlantationProject, getProjectMembers, TEAM_PLANTATION_ID, buildFeishuRowsFromProjects, extractMangaName } from "./utils/moetranApi.js";
 import { saveFeishuConfig, getFeishuConfig, getOrCreateFeishuSyncContext, batchUpsertMangasToFeishu } from "./utils/feishuSync.js";
 
 async function injectContentScriptToAllTabs() {
