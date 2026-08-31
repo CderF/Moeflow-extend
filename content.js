@@ -146,6 +146,14 @@ function safeSendMessage(message, callback) {
 }
 
 // 2. Inject In-Page Floating Widget — Main Capsule + Sub-Capsule Menu
+
+// Full symbol set for the Japanese Symbols panel (also the pool for shortcut slots)
+const JSYM_LIST = [
+  '♥', '♡', '♪', '☆', '★', '※', '…', '「', '」', '『', '』', '、',
+  '﹏﹏', '‧', '︿', '﹀', '～', '|', '{', '}', '《', '》',
+  '↑', '↓', '←', '→', '?', '●', '【', '】', '〰️', '„', '“', '〝', '〟'
+];
+
 function initFloatingWidget() {
   if (document.getElementById("mt-floating-widget-root")) return;
 
@@ -290,7 +298,10 @@ function initFloatingWidget() {
           <svg class="mt-sf-icon" viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
           <span>日文符号</span>
         </div>
-        <button class="mt-jsym-close" id="mt-jsym-close-btn">&times;</button>
+        <div class="mt-jsym-header-actions">
+          <button class="mt-jsym-edit-btn" id="mt-jsym-edit-btn" title="自定义快捷键">⚙</button>
+          <button class="mt-jsym-close" id="mt-jsym-close-btn">&times;</button>
+        </div>
       </div>
       <div class="mt-jsym-hint" id="mt-jsym-hint"></div>
       <div class="mt-jsym-body" id="mt-jsym-body"></div>
@@ -358,6 +369,7 @@ function initFloatingWidget() {
   const jsymModalBox = document.getElementById("mt-jsym-modal-box");
   const jsymHeader = document.getElementById("mt-jsym-header");
   const jsymCloseBtn = document.getElementById("mt-jsym-close-btn");
+  const jsymEditBtn = document.getElementById("mt-jsym-edit-btn");
 
   // Meme Encyclopedia DOM references
   const mwikiModalBox = document.getElementById("mt-mwiki-modal-box");
@@ -604,34 +616,33 @@ function initFloatingWidget() {
   if (jsymCloseBtn) {
     jsymCloseBtn.addEventListener("click", () => {
       jsymModalBox.classList.remove("mt-active");
+      // Leaving the panel must also leave edit mode and cancel any in-flight
+      // recording, otherwise the global keydown handler would keep capturing keys.
+      if (JSYM_EDIT_STATE.active || JSYM_EDIT_STATE.recording != null) {
+        JSYM_EDIT_STATE.active = false;
+        JSYM_EDIT_STATE.picking = null;
+        JSYM_EDIT_STATE.recording = null;
+        renderJsymPanelContent();
+      }
+    });
+  }
+
+  // Toggle the customize-shortcuts editor inside the panel
+  if (jsymEditBtn) {
+    jsymEditBtn.addEventListener("click", () => {
+      JSYM_EDIT_STATE.active = !JSYM_EDIT_STATE.active;
+      if (!JSYM_EDIT_STATE.active) {
+        JSYM_EDIT_STATE.picking = null;
+        JSYM_EDIT_STATE.recording = null;
+      }
+      renderJsymPanelContent();
     });
   }
 
   // Build symbol buttons dynamically from the symbol list
-  const JSYM_LIST = [
-    '♥', '♡', '♪', '☆', '★', '※', '…', '「', '」', '『', '』', '、',
-    '﹏﹏', '‧', '︿', '﹀', '～', '|', '{', '}', '《', '》',
-    '↑', '↓', '←', '→', '?', '●', '【', '】', '〰️', '„', '“', '〝', '〟'
-  ];
   const jsymBody = document.getElementById("mt-jsym-body");
   if (jsymBody) {
-    JSYM_LIST.forEach((sym) => {
-      const btn = document.createElement("button");
-      btn.className = "mt-jsym-sym-btn";
-      btn.textContent = sym;
-      btn.title = sym;
-      // Critical: prevent the button from stealing focus from the translation input.
-      // mousedown fires before the browser moves focus; preventDefault() stops that
-      // transfer while still allowing the subsequent click event to fire normally.
-      btn.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-      });
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        insertSymbol(sym);
-      });
-      jsymBody.appendChild(btn);
-    });
+    buildJsymSymbolGrid(jsymBody);
   }
 
 
@@ -1383,7 +1394,7 @@ function initJsymDragBehavior(modalBox, headerElem) {
   let isDragging = false;
 
   headerElem.addEventListener("pointerdown", (e) => {
-    if (e.target.closest("#mt-jsym-close-btn")) return;
+    if (e.target.closest("#mt-jsym-close-btn, #mt-jsym-edit-btn")) return;
     if (e.button !== 0) return;
 
     const rect = modalBox.getBoundingClientRect();
@@ -1556,6 +1567,10 @@ function initMwikiDragBehavior(modalBox, headerElem) {
   });
 }
 
+function isEditableTarget(el) {
+  return !!(el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable));
+}
+
 /**
  * Inserts a symbol at the current cursor position of the focused input element.
  * Handles both standard <input>/<textarea> and contentEditable (e.g. rich text editors).
@@ -1563,13 +1578,7 @@ function initMwikiDragBehavior(modalBox, headerElem) {
  */
 function insertSymbol(sym) {
   const el = document.activeElement;
-  const isTextInput = el && (
-    el.tagName === "INPUT" ||
-    el.tagName === "TEXTAREA" ||
-    el.isContentEditable
-  );
-
-  if (!isTextInput) {
+  if (!isEditableTarget(el)) {
     showJsymHint("请先点击翻译输入框，再点击符号");
     return;
   }
@@ -1602,6 +1611,295 @@ function showJsymHint(msg) {
   hintEl._hideTimer = setTimeout(() => {
     hintEl.classList.remove("mt-jsym-hint-visible");
   }, 2200);
+}
+
+// --- Japanese Symbols Panel: Customizable Shortcuts ---
+// Five slots, each binding a key combination to one symbol from JSYM_LIST.
+// Combos are matched by e.code (layout-independent) plus modifier flags.
+
+const JSYM_DEFAULT_SHORTCUTS = [
+  { symbol: '♥', alt: true, shift: true, ctrl: false, meta: false, code: 'Digit1' },
+  { symbol: '♡', alt: true, shift: true, ctrl: false, meta: false, code: 'Digit2' },
+  { symbol: '♪', alt: true, shift: true, ctrl: false, meta: false, code: 'Digit3' },
+  { symbol: '☆', alt: true, shift: true, ctrl: false, meta: false, code: 'Digit4' },
+  { symbol: '★', alt: true, shift: true, ctrl: false, meta: false, code: 'Digit5' }
+];
+
+let jsymShortcuts = null;      // current 5-slot config (normalized)
+const JSYM_EDIT_STATE = { active: false, picking: null, recording: null };
+
+function isMacPlatform() {
+  return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
+}
+
+function codeLabel(code) {
+  if (!code) return "";
+  let m = /^Digit(\d)$/.exec(code); if (m) return m[1];
+  m = /^Key([A-Z])$/.exec(code); if (m) return m[1];
+  m = /^Numpad(\d)$/.exec(code); if (m) return m[1];
+  return code;
+}
+
+function comboLabel(c) {
+  if (!c) return "";
+  const mods = [];
+  if (c.ctrl) mods.push(isMacPlatform() ? "⌃" : "Ctrl");
+  if (c.alt) mods.push(isMacPlatform() ? "⌥" : "Alt");
+  if (c.shift) mods.push("Shift");
+  if (c.meta) mods.push(isMacPlatform() ? "⌘" : "Meta");
+  mods.push(codeLabel(c.code));
+  return mods.join("+");
+}
+
+function comboKey(c) {
+  return [!!c.alt, !!c.ctrl, !!c.meta, !!c.shift, c.code || ""].join("|");
+}
+
+function comboMatches(c, e) {
+  return !!c.alt === !!e.altKey &&
+    !!c.ctrl === !!e.ctrlKey &&
+    !!c.meta === !!e.metaKey &&
+    !!c.shift === !!e.shiftKey &&
+    c.code === e.code;
+}
+
+function normalizeJsymShortcuts(raw) {
+  const out = [];
+  for (let i = 0; i < JSYM_DEFAULT_SHORTCUTS.length; i++) {
+    const d = JSYM_DEFAULT_SHORTCUTS[i];
+    const r = raw && raw[i];
+    // A stored slot is trusted only if its symbol is still in the panel pool;
+    // anything corrupt or out-of-pool falls back to the default slot.
+    if (r && typeof r === "object" && typeof r.code === "string" && JSYM_LIST.includes(r.symbol)) {
+      out.push({
+        symbol: r.symbol,
+        alt: !!r.alt, ctrl: !!r.ctrl, meta: !!r.meta, shift: !!r.shift,
+        code: r.code
+      });
+    } else {
+      out.push({ ...d });
+    }
+  }
+  return out;
+}
+
+function loadJsymShortcuts() {
+  // Activate defaults immediately so shortcuts work before storage resolves;
+  // the persisted config then overrides once chrome.storage.local returns.
+  jsymShortcuts = normalizeJsymShortcuts(null);
+  if (typeof chrome === "undefined" || !chrome.storage || !chrome.storage.local) {
+    document.documentElement.setAttribute("data-mt-jsym-ready", "1");
+    return;
+  }
+  chrome.storage.local.get("mt-jsym-shortcuts", (data) => {
+    jsymShortcuts = normalizeJsymShortcuts(data && data["mt-jsym-shortcuts"]);
+    document.documentElement.setAttribute("data-mt-jsym-ready", "1");
+  });
+}
+
+function openJsymPanelPublic() {
+  const box = document.getElementById("mt-jsym-modal-box");
+  if (!box) return;
+  positionJsymModal(box);
+  box.classList.add("mt-active");
+}
+
+function insertSymbolShortcut(sym) {
+  if (!isEditableTarget(document.activeElement)) {
+    openJsymPanelPublic();
+    showJsymHint("请先点击翻译输入框，再按快捷键");
+    return;
+  }
+  insertSymbol(sym);
+}
+
+function handleJsymGlobalKeydown(e) {
+  if (!jsymShortcuts) return;
+  // Ignore key auto-repeat so holding a combo doesn't insert the symbol repeatedly.
+  if (e.repeat) return;
+  if (JSYM_EDIT_STATE.recording != null) {
+    captureRecordedCombo(e);
+    return;
+  }
+  for (let i = 0; i < jsymShortcuts.length; i++) {
+    if (comboMatches(jsymShortcuts[i], e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      insertSymbolShortcut(jsymShortcuts[i].symbol);
+      return;
+    }
+  }
+}
+
+function buildJsymSymbolGrid(body) {
+  if (!body) return;
+  body.innerHTML = "";
+  JSYM_LIST.forEach((sym) => {
+    const btn = document.createElement("button");
+    btn.className = "mt-jsym-sym-btn";
+    btn.textContent = sym;
+    btn.title = sym;
+    // Keep focus on the translation input: mousedown would normally steal focus,
+    // preventDefault() blocks that while still letting the click event fire.
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      insertSymbol(sym);
+    });
+    body.appendChild(btn);
+  });
+}
+
+function renderJsymPanelContent() {
+  if (!jsymShortcuts) jsymShortcuts = normalizeJsymShortcuts(null);
+  const body = document.getElementById("mt-jsym-body");
+  if (!body) return;
+  if (JSYM_EDIT_STATE.active) {
+    body.classList.add("mt-jsym-edit-mode");
+    body.innerHTML = buildJsymEditorHtml();
+  } else {
+    body.classList.remove("mt-jsym-edit-mode");
+    buildJsymSymbolGrid(body);
+  }
+}
+
+function buildJsymEditorHtml() {
+  const rows = jsymShortcuts.map((s, i) => {
+    const recording = JSYM_EDIT_STATE.recording === i;
+    const picking = JSYM_EDIT_STATE.picking === i;
+    const comboText = comboLabel(s);
+    return `
+      <div class="mt-jsym-edit-row" data-slot="${i}">
+        <span class="mt-jsym-edit-idx">${i + 1}</span>
+        <span class="mt-jsym-edit-sym">${escapeHtml(s.symbol)}</span>
+        <span class="mt-jsym-edit-combo">${escapeHtml(comboText)}${recording ? '<em class="mt-jsym-edit-recording">请按键… Esc 取消</em>' : ""}</span>
+        <button class="mt-jsym-edit-act" data-act="pick">换符号</button>
+        <button class="mt-jsym-edit-act" data-act="record">录按键</button>
+      </div>
+      ${picking ? buildJsymPicker(i) : ""}
+    `;
+  }).join("");
+  return `
+    <div class="mt-jsym-edit-head">自定义快捷键</div>
+    <div class="mt-jsym-edit-list">${rows}</div>
+    <div class="mt-jsym-edit-actions">
+      <button class="mt-jsym-edit-act" data-act="save">保存</button>
+      <button class="mt-jsym-edit-act" data-act="cancel">取消</button>
+    </div>
+  `;
+}
+
+function buildJsymPicker(i) {
+  const btns = JSYM_LIST.map((sym) =>
+    `<button class="mt-jsym-pick-sym" data-slot="${i}" data-symbol="${escapeHtml(sym)}">${escapeHtml(sym)}</button>`
+  ).join("");
+  return `<div class="mt-jsym-picker">${btns}</div>`;
+}
+
+function handleJsymEditorClick(e) {
+  const pickBtn = e.target.closest("[data-act='pick']");
+  if (pickBtn) {
+    const slot = parseInt(pickBtn.closest(".mt-jsym-edit-row").dataset.slot, 10);
+    JSYM_EDIT_STATE.picking = JSYM_EDIT_STATE.picking === slot ? null : slot;
+    JSYM_EDIT_STATE.recording = null;
+    renderJsymPanelContent();
+    return;
+  }
+  const recBtn = e.target.closest("[data-act='record']");
+  if (recBtn) {
+    const slot = parseInt(recBtn.closest(".mt-jsym-edit-row").dataset.slot, 10);
+    JSYM_EDIT_STATE.picking = null;
+    JSYM_EDIT_STATE.recording = slot;
+    renderJsymPanelContent();
+    return;
+  }
+  const pickSym = e.target.closest(".mt-jsym-pick-sym");
+  if (pickSym) {
+    const slot = parseInt(pickSym.dataset.slot, 10);
+    jsymShortcuts[slot].symbol = pickSym.dataset.symbol;
+    JSYM_EDIT_STATE.picking = null;
+    renderJsymPanelContent();
+    return;
+  }
+  if (e.target.closest("[data-act='save']")) {
+    saveJsymShortcuts();
+    return;
+  }
+  if (e.target.closest("[data-act='cancel']")) {
+    JSYM_EDIT_STATE.active = false;
+    JSYM_EDIT_STATE.picking = null;
+    JSYM_EDIT_STATE.recording = null;
+    renderJsymPanelContent();
+  }
+}
+
+function saveJsymShortcuts() {
+  const seen = new Set();
+  for (let i = 0; i < jsymShortcuts.length; i++) {
+    const key = comboKey(jsymShortcuts[i]);
+    if (seen.has(key)) {
+      showJsymHint(`第 ${i + 1} 个槽位的按键组合与其他槽位重复`);
+      return;
+    }
+    seen.add(key);
+  }
+  const payload = jsymShortcuts.map((s) => ({
+    symbol: s.symbol, alt: s.alt, ctrl: s.ctrl, meta: s.meta, shift: s.shift, code: s.code
+  }));
+  if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.set({ "mt-jsym-shortcuts": payload }, () => {
+      showJsymHint("快捷键已保存");
+    });
+  }
+  JSYM_EDIT_STATE.active = false;
+  JSYM_EDIT_STATE.picking = null;
+  JSYM_EDIT_STATE.recording = null;
+  renderJsymPanelContent();
+}
+
+function captureRecordedCombo(e) {
+  const slot = JSYM_EDIT_STATE.recording;
+  // A modifier key by itself is not a main key — let it pass through and keep
+  // recording so the next keydown (Digit1 etc., with modifiers held) is the combo.
+  if (e.key === "Alt" || e.key === "Shift" || e.key === "Control" || e.key === "Meta") {
+    return;
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    e.stopPropagation();
+    JSYM_EDIT_STATE.recording = null;
+    renderJsymPanelContent();
+    return;
+  }
+  // Recording must not swallow normal typing: a bare key is rejected with a hint
+  // but still allowed to reach the page.
+  if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    showJsymHint("快捷键需至少包含一个修饰键（Alt / Ctrl / ⌘ / Shift）");
+    return;
+  }
+  if (!e.code) {
+    showJsymHint("无法识别该按键，请重试");
+    return;
+  }
+  const combo = { alt: e.altKey, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey, code: e.code };
+  for (let i = 0; i < jsymShortcuts.length; i++) {
+    if (i !== slot && comboKey(jsymShortcuts[i]) === comboKey(combo)) {
+      e.preventDefault();
+      e.stopPropagation();
+      showJsymHint(`该组合已分配给第 ${i + 1} 个槽位`);
+      return;
+    }
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  jsymShortcuts[slot] = { ...jsymShortcuts[slot], ...combo };
+  JSYM_EDIT_STATE.recording = null;
+  renderJsymPanelContent();
+}
+
+function initJsymEditor() {
+  const body = document.getElementById("mt-jsym-body");
+  if (body) body.addEventListener("click", handleJsymEditorClick);
 }
 
 function doJdictSearch() {
@@ -2031,6 +2329,9 @@ function escapeHtml(str) {
 // Execute on load
 syncAuthToken();
 initFloatingWidget();
+loadJsymShortcuts();
+document.addEventListener("keydown", handleJsymGlobalKeydown, true);
+initJsymEditor();
 
 // Feishu Bitable Tab Close Auto-Sync Hook
 let hasSyncedOnClose = false;

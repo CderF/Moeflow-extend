@@ -291,3 +291,13 @@ npx playwright test tests/theme.spec.mjs
 ✅ Step C: test_webhook_sync 端到端写入验证（仅在 feishuSync.js 有写入逻辑变更时）
 ✅ Step D: 边界场景（计划删除、文字话名、Token 过期、并发队列）
 ```
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues, accessed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout. See `docs/agents/domain.md`.
