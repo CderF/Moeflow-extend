@@ -3,7 +3,7 @@
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform: Chrome](https://img.shields.io/badge/Platform-Chrome%20%2F%20Edge-orange.svg)](https://www.google.com/chrome/)
-[![Privacy Policy](https://img.shields.io/badge/Privacy-Policy-purple.svg)](Privacy%20Policy.md)
+[![Privacy Policy](https://img.shields.io/badge/Privacy-Policy-purple.svg)](docs/Privacy%20Policy.md)
 
 **种植园尨译助手** 是一款专为 [Moetran (尨译)](https://moetran.com) 翻译平台成员（尤其是种植园汉化组成员）打造的高颜值、自动化浏览器扩展（Chrome Manifest V3）。
 
@@ -143,7 +143,10 @@ Moeflow-extend/
 ├── popup-theme-preloader.js  # Popup 防闪烁主题预加载脚本
 ├── moetran-theme.css         # Moetran 网页端定制主题样式表
 ├── rules.json                # declarativeNetRequest 头像 Referer 修改规则
-├── Privacy Policy.md         # 扩展隐私政策文档
+├── docs/
+│   ├── Privacy Policy.md     # 扩展隐私政策文档
+│   ├── proposals/            # 提案与规格文档 (proposal-quick-key / proposal-image-dim / spec)
+│   └── agents/               # Agent 协作文档 (issue-tracker / domain)
 ├── utils/
 │   ├── moetranApi.js         # REST API 服务模块 (Token 提取、多页分页、统计计算与飞书行构建引擎)
 │   └── feishuSync.js         # 飞书 Bitable 同步模块 (Token/记录快照缓存、批量写入、字段自动创建)
@@ -191,6 +194,6 @@ Moeflow-extend/
 
 ## ✦ 隐私与开源许可证 (Privacy & License)
 
-- **隐私政策**：详见 [Privacy Policy.md](Privacy%20Policy.md)。扩展仅在本地读取必须的登录凭证与统计接口，保护用户个人数据安全。
+- **隐私政策**：详见 [Privacy Policy.md](docs/Privacy%20Policy.md)。扩展仅在本地读取必须的登录凭证与统计接口，保护用户个人数据安全。
 - **开源许可证**：本项目采用 [MIT License](LICENSE) 许可证。
 

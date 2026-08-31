@@ -21,7 +21,10 @@ Moeflow-extend/
 ├── popup-theme-preloader.js  # Popup 防闪烁主题预加载脚本
 ├── moetran-theme.css         # Moetran 网页端定制主题样式表
 ├── rules.json                # declarativeNetRequest 头像 Referer 修改规则
-├── Privacy Policy.md         # 扩展隐私政策声明文档 (Privacy Policy)
+├── docs/
+│   ├── Privacy Policy.md     # 扩展隐私政策声明文档 (Privacy Policy)
+│   ├── proposals/            # 提案与规格文档 (proposal-quick-key / proposal-image-dim / spec)
+│   └── agents/               # Agent 协作文档 (issue-tracker / domain)
 ├── utils/
 │   ├── moetranApi.js         # API 服务模块 (Token 提取、接口请求、多页分页、统计计算与飞书行构建引擎)
 │   └── feishuSync.js         # 飞书 Bitable 同步模块 (Token/记录快照缓存、批量写入、字段自动创建)
