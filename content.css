@@ -1230,6 +1230,157 @@ html[data-mt-theme="dark"] .mt-icon-dark {
   transition-duration: 0.08s;
 }
 
+/* Header actions: customize button + close button */
+.mt-jsym-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mt-jsym-edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--mt-text-sub);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.mt-jsym-edit-btn:hover {
+  color: var(--mt-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Edit-mode layout for the symbol body */
+.mt-jsym-body.mt-jsym-edit-mode {
+  display: block;
+  max-height: min(440px, 60vh);
+  overflow-y: auto;
+}
+
+.mt-jsym-edit-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mt-text);
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+
+.mt-jsym-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mt-jsym-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--mt-border);
+  border-radius: 10px;
+  background: var(--mt-card-bg);
+}
+
+.mt-jsym-edit-idx {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--mt-sf-blue);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mt-jsym-edit-sym {
+  font-size: 16px;
+  min-width: 24px;
+  text-align: center;
+  color: var(--mt-text);
+}
+
+.mt-jsym-edit-combo {
+  flex: 1;
+  font-size: 11px;
+  color: var(--mt-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mt-jsym-edit-recording {
+  color: #ff9500;
+  font-style: normal;
+}
+
+.mt-jsym-edit-act {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--mt-border);
+  background: var(--mt-card-bg);
+  color: var(--mt-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mt-jsym-edit-act:hover {
+  border-color: var(--mt-sf-blue);
+  color: var(--mt-sf-blue);
+}
+
+.mt-jsym-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mt-jsym-edit-actions .mt-jsym-edit-act[data-act="save"] {
+  border-color: var(--mt-sf-blue);
+  color: var(--mt-sf-blue);
+}
+
+/* Symbol picker shown inside edit mode */
+.mt-jsym-picker {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 8px;
+  border: 1px dashed var(--mt-border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mt-jsym-pick-sym {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  background: var(--mt-card-bg);
+  border: 1px solid var(--mt-border);
+  color: var(--mt-text);
+  padding: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.mt-jsym-pick-sym:hover {
+  border-color: var(--mt-sf-blue);
+  transform: scale(1.12);
+}
+
 /* --- Meme Encyclopedia (梗百科) Modal Window --- */
 .mt-mwiki-modal {
   position: fixed;
