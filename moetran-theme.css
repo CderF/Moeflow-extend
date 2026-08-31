@@ -871,6 +871,18 @@ html[data-mt-theme="dark"] #app  [class*="css-"] .List__Items > a:hover:not([cla
   color: rgba(0, 0, 0, 0.85) !important;
 }
 
+/* ============================================================
+   12. 深色模式 - 源图浏览区图片降暗 (issue #8)
+   ============================================================ */
+/* 翻译页(给图片添加标点并附上翻译)左侧「源图浏览区」的源图本身偏亮,
+   深色模式下降暗到 brightness(0.85)。背景已深、保持不变;
+   只对 <img> 生效,标注/批注层不受影响。 */
+html[data-mt-theme="dark"] [class*="ImageSourceViewer"] img,
+html[data-mt-theme="dark"] [class*="ImageSource"] [class*="Viewer"] img,
+html[data-mt-theme="dark"] [class*="ImageSource"] [class*="Item"] img {
+  filter: brightness(0.85) !important;
+}
+
 
 
 
